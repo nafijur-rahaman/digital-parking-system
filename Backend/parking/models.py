@@ -1,37 +1,90 @@
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.utils import timezone
 from users.models import CustomUser
 
-# Vehicle model
-class Vehicle(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    vehicle_number = models.CharField(max_length=20)
-    vehicle_type = models.CharField(max_length=20)  # bike/car
+
+class ParkingLot(models.Model):
+    LOT_TYPE_CHOICES = [
+        ('general', 'General'),
+        ('faculty', 'Faculty Only'),
+        ('vip', 'VIP'),
+        ('disabled', 'Disabled'),
+        ('ev', 'EV Charging'),
+    ]
+
+    name = models.CharField(max_length=100, unique=True, help_text="e.g., ABC_Slot, North_Block_A")
+    lot_type = models.CharField(max_length=20, choices=LOT_TYPE_CHOICES, default='general')
+    location = models.CharField(max_length=150, help_text="e.g., Behind Academic Building")
+    description = models.TextField(blank=True)
+    
+    total_capacity = models.PositiveIntegerField(default=0, help_text="Total number of vehicles this lot can hold (e.g., 40)")
+    current_occupied = models.PositiveIntegerField(default=0, editable=False)
+    
+    is_active = models.BooleanField(default=True)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='created_lots')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.vehicle_number
+        return f"{self.name} ({self.total_capacity} spots) - {self.get_lot_type_display()}"
 
-# Parking slot model
-class ParkingSlot(models.Model):
-    slot_code = models.CharField(max_length=5, unique=True)
-    is_occupied = models.BooleanField(default=False)
+    class Meta:
+        ordering = ['name']
+        verbose_name = "Parking Lot"
+        verbose_name_plural = "Parking Lots"
 
-    def __str__(self):
-        return self.slot_code
+    @property
+    def available_spots(self):
+        return max(0, self.total_capacity - self.current_occupied)
 
-# Booking / History model
+    def clean(self):
+        if self.total_capacity < 0:
+            raise ValidationError("Total capacity cannot be negative")
+
+
 class Booking(models.Model):
     STATUS_CHOICES = [
+        ('pending', 'Pending'),
         ('active', 'Active'),
         ('completed', 'Completed'),
-        ('overstayed', 'Overstayed'),
+        ('cancelled', 'Cancelled'),
     ]
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE)
-    slot = models.ForeignKey(ParkingSlot, on_delete=models.CASCADE)
-    token = models.CharField(max_length=10, unique=True, default=uuid.uuid4)
-    entry_time = models.DateTimeField(auto_now_add=True)
-    exit_time = models.DateTimeField(null=True, blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='bookings')
+    parking_lot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE, related_name='bookings')
+    
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    vehicle_number = models.CharField(max_length=20, blank=True, help_text="Optional: License plate")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_time']
+
+    def clean(self):
+        if self.start_time >= self.end_time:
+            raise ValidationError("End time must be after start time.")
+
+        # Check if there is space available during this time
+        if self.status in ['pending', 'active']:
+            overlapping_bookings = Booking.objects.filter(
+                parking_lot=self.parking_lot,
+                status__in=['pending', 'active'],
+                start_time__lt=self.end_time,
+                end_time__gt=self.start_time,
+            ).exclude(pk=self.pk)
+
+            if overlapping_bookings.count() >= self.parking_lot.total_capacity:
+                raise ValidationError(f"No space available in {self.parking_lot.name} during this time.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.token} - {self.user.name}"
+        return f"{self.user.username} - {self.parking_lot.name} ({self.start_time.date()})"
