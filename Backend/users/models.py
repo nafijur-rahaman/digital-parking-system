@@ -1,0 +1,25 @@
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+class CustomUser(AbstractUser):
+    ROLE_CHOICES = [
+        ('superadmin', 'Super Admin'),
+        ('staff', 'Staff'),
+    ]
+    
+    role = models.CharField(
+        max_length=20, 
+        choices=ROLE_CHOICES, 
+        default='staff'
+    )
+    full_name = models.CharField(max_length=150, blank=True)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "User"
+        verbose_name_plural = "Users"
+
+    def __str__(self):
+        return f"{self.username} ({self.role}) - {self.full_name or 'No Name'}"

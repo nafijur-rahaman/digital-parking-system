@@ -1,24 +1,9 @@
 from django.db import models
-import uuid
-
-# User model (simple for demo)
-class User(models.Model):
-    UNIVERSITY_ROLES = [
-        ('student', 'Student'),
-        ('faculty', 'Faculty'),
-        ('staff', 'Staff'),
-    ]
-    university_id = models.CharField(max_length=10, unique=True)
-    name = models.CharField(max_length=50)
-    email = models.EmailField()
-    role = models.CharField(max_length=10, choices=UNIVERSITY_ROLES)
-
-    def __str__(self):
-        return f"{self.university_id} - {self.name}"
+from users.models import CustomUser
 
 # Vehicle model
 class Vehicle(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     vehicle_number = models.CharField(max_length=20)
     vehicle_type = models.CharField(max_length=20)  # bike/car
 
