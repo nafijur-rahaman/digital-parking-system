@@ -40,7 +40,7 @@ INSTALLED_APPS = [
 
     #local apps
     'users',
-    # 'parking',
+    'parking',
 
     #third party apps
     'rest_framework',

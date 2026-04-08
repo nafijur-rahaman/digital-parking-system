@@ -7,11 +7,15 @@ from .views import (
 )
 
 urlpatterns = [
-    # Parking Lot CRUD (Superadmin only)
-    path('lots/', ParkingLotListCreateView.as_view(), name='parking-lot-list-create'),
-    path('lots/<int:pk>/', ParkingLotDetailView.as_view(), name='parking-lot-detail'),
+    # Parking Lot CRUD
+    path('parkings/get-all-lots/', ParkingLotListCreateView.as_view(), name='get-all-lots'),
+    path('parkings/create-lot/', ParkingLotListCreateView.as_view(), name='create-lot'),
+    path('parking/update-lot/<int:pk>/', ParkingLotDetailView.as_view(), name='update-lot'),
+    path('parking/delete-lot/<int:pk>/', ParkingLotDetailView.as_view(), name='delete-lot'),
 
     # Booking endpoints
-    path('bookings/', BookingListCreateView.as_view(), name='booking-list-create'),
-    path('bookings/<int:pk>/', BookingDetailView.as_view(), name='booking-detail'),
+    path('parkings/get-all-bookings/', BookingListCreateView.as_view(    ), name='get-all-bookings'),
+    path('parkings/create-booking/', BookingListCreateView.as_view(), name='create-booking'),
+    path('parking/update-booking/<int:pk>/', BookingDetailView.as_view(), name='update-booking'),
+    path('parking/delete-booking/<int:pk>/', BookingDetailView.as_view(), name='delete-booking'),
 ]
