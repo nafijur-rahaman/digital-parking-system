@@ -1,1 +1,50 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-app: #050505;
+    --bg-surface: rgba(18, 18, 18, 0.65);
+    --bg-surface-hover: rgba(30, 30, 30, 0.8);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --border-glass-strong: rgba(255, 255, 255, 0.15);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-app);
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.03), transparent 25%),
+      radial-gradient(circle at 85% 30%, rgba(59, 130, 246, 0.04), transparent 25%);
+    color: #e5e7eb;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    background: var(--bg-surface);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+  
+  .glass-panel-hover {
+    transition: all 0.2s ease;
+  }
+  .glass-panel-hover:hover {
+    background: var(--bg-surface-hover);
+    border-color: var(--border-glass-strong);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  }
+  
+  .text-glow-blue {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+  .text-glow-green {
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+  }
+  .text-glow-red {
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+  }
+}
