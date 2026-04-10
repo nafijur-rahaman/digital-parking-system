@@ -1,10 +1,10 @@
 from django.core.management.base import BaseCommand
-from users.models import CustomUser
+from users.models import CustomUser, UniversityMember
 import random
 from django.db import transaction
 
 class Command(BaseCommand):
-    help = 'Seeds the database with Dummy University Users (Students, Faculty, Staff)'
+    help = 'Seeds the database with Dummy University Members (Students, Faculty, Staff)'
 
     def handle(self, *args, **kwargs):
         roles = ['student', 'faculty', 'staff']
@@ -12,10 +12,16 @@ class Command(BaseCommand):
         last_names = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez']
         years = ['2023', '2024']
 
-        users_to_create = []
+        # Clean up mistakenly created dummy CustomUsers from previous run
+        # if any were added that shouldn't have accounts. We know we had those roles:
+        CustomUser.objects.filter(role__in=['student', 'faculty']).delete()
+        # Also let's wipe existing testing UniversityMembers so we don't pile up
+        UniversityMember.objects.all().delete()
+
+        members_to_create = []
         
         # Keep track of generated IDs to prevent duplicates
-        generated_ids = set(CustomUser.objects.exclude(university_id__isnull=True).values_list('university_id', flat=True))
+        generated_ids = set()
 
         for role in roles:
             for i in range(10):
@@ -32,24 +38,21 @@ class Command(BaseCommand):
                 f_name = random.choice(first_names)
                 l_name = random.choice(last_names)
                 full_name = f"{f_name} {l_name}"
-                username = f"{f_name.lower()}_{l_name.lower()}_{uni_id}"
-                email = f"{username}@university.edu"
+                email = f"{f_name.lower()}_{l_name.lower()}_{uni_id}@university.edu"
                 phone = f"+1{random.randint(1000000000, 9999999999)}"
 
-                user = CustomUser(
-                    username=username,
+                member = UniversityMember(
                     full_name=full_name,
                     email=email,
                     phone=phone,
-                    role=role,
+                    category=role,
                     university_id=uni_id
                 )
-                user.set_password('university123')
-                users_to_create.append(user)
+                members_to_create.append(member)
 
         try:
             with transaction.atomic():
-                CustomUser.objects.bulk_create(users_to_create)
-            self.stdout.write(self.style.SUCCESS('Successfully seeded 30 university users!'))
+                UniversityMember.objects.bulk_create(members_to_create)
+            self.stdout.write(self.style.SUCCESS('Successfully seeded 30 university members!'))
         except Exception as e:
-            self.stdout.write(self.style.ERROR(f'Failed to seed users: {e}'))
+            self.stdout.write(self.style.ERROR(f'Failed to seed members: {e}'))

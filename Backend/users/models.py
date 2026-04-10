@@ -5,16 +5,13 @@ class CustomUser(AbstractUser):
     ROLE_CHOICES = [
         ('superadmin', 'Super Admin'),
         ('staff', 'Staff'),
-        ('student', 'Student'),
-        ('faculty', 'Faculty'),
     ]
     
     role = models.CharField(
         max_length=20, 
         choices=ROLE_CHOICES, 
-        default='student'
+        default='staff'
     )
-    university_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, blank=True, null=True)
@@ -26,3 +23,20 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return f"{self.username} ({self.role}) - {self.full_name or 'No Name'}"
+
+
+class UniversityMember(models.Model):
+    CATEGORY_CHOICES = [
+        ('student', 'Student'),
+        ('faculty', 'Faculty'),
+        ('staff', 'Staff'),
+    ]
+
+    university_id = models.CharField(max_length=50, unique=True)
+    full_name = models.CharField(max_length=150)
+    email = models.EmailField(unique=True)
+    phone = models.CharField(max_length=15, blank=True, null=True)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+
+    def __str__(self):
+        return f"{self.university_id} - {self.full_name} ({self.category})"

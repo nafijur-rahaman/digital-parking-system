@@ -15,19 +15,22 @@ class ParkingLotSerializer(serializers.ModelSerializer):
 
 
 class BookingCreateSerializer(serializers.ModelSerializer):
+    university_id = serializers.CharField(write_only=True, required=True, help_text="University ID of the parker")
+
     class Meta:
         model = Booking
-        fields = ['parking_lot', 'start_time', 'end_time', 'vehicle_number']
+        fields = ['parking_lot', 'start_time', 'end_time', 'vehicle_number', 'university_id']
 
 
 class BookingSerializer(serializers.ModelSerializer):
     parking_lot_name = serializers.ReadOnlyField(source='parking_lot.name')
-    user_username = serializers.ReadOnlyField(source='user.username')
+    university_member_name = serializers.ReadOnlyField(source='university_member.full_name')
+    created_by_username = serializers.ReadOnlyField(source='created_by.username')
 
     class Meta:
         model = Booking
         fields = [
-            'id', 'user_username', 'parking_lot', 'parking_lot_name',
+            'id', 'created_by_username', 'university_member_name', 'parking_lot', 'parking_lot_name',
             'start_time', 'end_time', 'status', 'vehicle_number', 'created_at'
         ]
-        read_only_fields = ['user_username', 'status']
+        read_only_fields = ['status']

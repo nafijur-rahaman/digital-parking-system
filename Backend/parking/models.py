@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from users.models import CustomUser
+from users.models import CustomUser, UniversityMember
 
 
 class ParkingLot(models.Model):
@@ -45,18 +45,19 @@ class ParkingLot(models.Model):
 
 class Booking(models.Model):
     STATUS_CHOICES = [
-        ('pending', 'Pending'),
         ('active', 'Active'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
 
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='bookings')
+    created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='created_bookings', help_text="Staff who authorized this")
+    university_member = models.ForeignKey(UniversityMember, on_delete=models.CASCADE, related_name='bookings')
+    exit_token = models.CharField(max_length=10, unique=True)
     parking_lot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE, related_name='bookings')
     
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     
     vehicle_number = models.CharField(max_length=20, blank=True, help_text="Optional: License plate")
     
@@ -71,10 +72,10 @@ class Booking(models.Model):
             raise ValidationError("End time must be after start time.")
 
         # Check if there is space available during this time
-        if self.status in ['pending', 'active']:
+        if self.status == 'active':
             overlapping_bookings = Booking.objects.filter(
                 parking_lot=self.parking_lot,
-                status__in=['pending', 'active'],
+                status='active',
                 start_time__lt=self.end_time,
                 end_time__gt=self.start_time,
             ).exclude(pk=self.pk)
@@ -87,4 +88,4 @@ class Booking(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.username} - {self.parking_lot.name} ({self.start_time.date()})"
+        return f"{self.university_member.full_name} - {self.parking_lot.name} ({self.start_time.date()})"

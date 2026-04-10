@@ -5,8 +5,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 
-from .models import CustomUser
-from .serializers import UserSerializer, UserCreateSerializer, LoginSerializer
+from .models import CustomUser, UniversityMember
+from .serializers import UserSerializer, UserCreateSerializer, LoginSerializer, UniversityMemberSerializer
 from .permissions import IsSuperAdmin, IsStaffOrSuperAdmin
 
 
@@ -113,16 +113,11 @@ class VerifyUniversityUserView(APIView):
 
     def get(self, request, university_id):
         try:
-            user = CustomUser.objects.get(university_id=university_id)
-            # Only return users who actually belong to the university side
-            # (student, faculty, staff)
-            if user.role not in ['student', 'faculty', 'staff', 'superadmin']:
-                return Response({"error": "User is not part of the university"}, status=status.HTTP_404_NOT_FOUND)
-                
-            serializer = UserSerializer(user)
+            member = UniversityMember.objects.get(university_id=university_id)
+            serializer = UniversityMemberSerializer(member)
             return Response({
                 "success": True,
                 "user": serializer.data
             })
-        except CustomUser.DoesNotExist:
+        except UniversityMember.DoesNotExist:
             return Response({"error": "User with this university ID not found"}, status=status.HTTP_404_NOT_FOUND)

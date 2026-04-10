@@ -4,6 +4,10 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.core.exceptions import ValidationError
 from django.db import transaction
+from django.core.mail import send_mail
+from django.conf import settings
+import random
+import string
 
 from .models import ParkingLot, Booking
 from .serializers import (
@@ -11,12 +15,13 @@ from .serializers import (
     BookingSerializer, 
     BookingCreateSerializer
 )
-from users.permissions import IsSuperAdmin
+from users.models import UniversityMember
+from users.permissions import IsSuperAdminOrReadOnly, IsSuperAdmin
 
 
 # ====================== PARKING LOT MANAGEMENT (Superadmin Only) ======================
 class ParkingLotListCreateView(APIView):
-    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    permission_classes = [IsAuthenticated, IsSuperAdminOrReadOnly]
 
     def get(self, request):
         """List all parking lots with availability"""
@@ -72,7 +77,7 @@ class ParkingLotDetailView(APIView):
             return Response({"error": "Parking lot not found"}, status=status.HTTP_404_NOT_FOUND)
         
         # Optional: Prevent delete if there are active bookings
-        if lot.bookings.filter(status__in=['pending', 'active']).exists():
+        if lot.bookings.filter(status='active').exists():
             return Response({"error": "Cannot delete lot with active bookings"}, 
                           status=status.HTTP_400_BAD_REQUEST)
         
@@ -87,9 +92,9 @@ class BookingListCreateView(APIView):
     def get(self, request):
         """Staff sees their own bookings, Superadmin sees all"""
         if request.user.role == 'superadmin':
-            bookings = Booking.objects.select_related('parking_lot', 'user').all()
+            bookings = Booking.objects.select_related('parking_lot', 'university_member').all()
         else:
-            bookings = Booking.objects.select_related('parking_lot').filter(user=request.user)
+            bookings = Booking.objects.select_related('parking_lot').filter(created_by=request.user)
         
         serializer = BookingSerializer(bookings, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -105,22 +110,50 @@ class BookingListCreateView(APIView):
         start_time = serializer.validated_data['start_time']
         end_time = serializer.validated_data['end_time']
         vehicle_number = serializer.validated_data.get('vehicle_number', '')
+        university_id = serializer.validated_data.get('university_id')
+
+        try:
+            member = UniversityMember.objects.get(university_id=university_id)
+        except UniversityMember.DoesNotExist:
+            return Response({"error": "University ID not found. User is not registered in the university."}, 
+                            status=status.HTTP_404_NOT_FOUND)
 
         if not parking_lot.is_active:
             return Response({"error": "This parking lot is currently inactive"}, 
                           status=status.HTTP_400_BAD_REQUEST)
 
+        exit_token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+
         booking = Booking(
-            user=request.user,
+            created_by=request.user,
+            university_member=member,
             parking_lot=parking_lot,
             start_time=start_time,
             end_time=end_time,
             vehicle_number=vehicle_number,
-            status='pending'
+            status='active',
+            exit_token=exit_token
         )
 
         try:
             booking.save()  # This triggers clean() → overlap + capacity check
+            
+            # Space is occupied upon booking creation
+            parking_lot.current_occupied += 1
+            parking_lot.save(update_fields=['current_occupied'])
+
+            # Send Email
+            try:
+                send_mail(
+                    subject="Your Digital Parking Booking Confirmed",
+                    message=f"Hello {member.full_name},\n\nYour parking space has been booked successfully.\n\nYour Exit Token is: {exit_token}\n\nPlease keep this token safe to give to the staff when you exit the parking lot.",
+                    from_email=settings.EMAIL_HOST_USER,
+                    recipient_list=[member.email],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
+            
             return Response({
                 "message": "Booking created successfully",
                 "booking": BookingSerializer(booking).data
@@ -136,7 +169,7 @@ class BookingDetailView(APIView):
         try:
             booking = Booking.objects.select_related('parking_lot').get(pk=pk)
             # Staff can only access their own booking
-            if booking.user != self.request.user and self.request.user.role != 'superadmin':
+            if booking.created_by != self.request.user and self.request.user.role != 'superadmin':
                 return None
             return booking
         except Booking.DoesNotExist:
@@ -150,8 +183,41 @@ class BookingDetailView(APIView):
         serializer = BookingSerializer(booking)
         return Response(serializer.data)
 
-    def patch(self, request, pk):
-        """Cancel a booking"""
+    @transaction.atomic
+    def put(self, request, pk):
+        """Update a booking (e.g. setting status to completed or cancelled)"""
+        booking = self.get_object(pk)
+        if not booking:
+            return Response({"error": "Booking not found or access denied"}, 
+                          status=status.HTTP_404_NOT_FOUND)
+
+        new_status = request.data.get('status')
+        was_active = booking.status == 'active'
+
+        if new_status:
+            if new_status not in ['active', 'completed', 'cancelled']:
+                return Response({"error": "Invalid status code."}, status=status.HTTP_400_BAD_REQUEST)
+            booking.status = new_status
+            booking.save()
+            
+            # If changed from active to something else, clear the space
+            if was_active and new_status in ['completed', 'cancelled']:
+                booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
+                booking.parking_lot.save(update_fields=['current_occupied'])
+
+        # Update other fields like vehicle number if provided
+        serializer = BookingSerializer(booking, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Booking updated successfully",
+                "booking": serializer.data
+            }, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @transaction.atomic
+    def delete(self, request, pk):
+        """Cancel a booking completely"""
         booking = self.get_object(pk)
         if not booking:
             return Response({"error": "Booking not found or access denied"}, 
@@ -161,9 +227,47 @@ class BookingDetailView(APIView):
             return Response({"error": "This booking cannot be cancelled anymore"}, 
                           status=status.HTTP_400_BAD_REQUEST)
 
+        was_active = booking.status == 'active'
         booking.status = 'cancelled'
         booking.save()
+        
+        if was_active:
+            booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
+            booking.parking_lot.save(update_fields=['current_occupied'])
+            
         return Response({
             "message": "Booking cancelled successfully",
             "booking": BookingSerializer(booking).data
         }, status=status.HTTP_200_OK)
+
+
+# ====================== VEHICLE EXIT ======================
+class VehicleExitView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @transaction.atomic
+    def post(self, request):
+        exit_token = request.data.get('exit_token')
+        if not exit_token:
+            return Response({"error": "Exit token is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            booking = Booking.objects.select_related('parking_lot').get(exit_token=exit_token)
+            # No user check needed locally because the token itself is the secure key
+                
+            if booking.status != 'active':
+                return Response({"error": f"Cannot exit. Booking is currently {booking.status}"}, status=status.HTTP_400_BAD_REQUEST)
+                
+            booking.status = 'completed'
+            booking.save()
+            
+            booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
+            booking.parking_lot.save(update_fields=['current_occupied'])
+            
+            return Response({
+                "message": "Vehicle exited successfully. Space freed.",
+                "booking": BookingSerializer(booking).data
+            }, status=status.HTTP_200_OK)
+            
+        except Booking.DoesNotExist:
+            return Response({"error": "Booking not found"}, status=status.HTTP_404_NOT_FOUND)
