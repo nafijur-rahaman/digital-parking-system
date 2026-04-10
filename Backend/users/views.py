@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate
 
 from .models import CustomUser
 from .serializers import UserSerializer, UserCreateSerializer, LoginSerializer
-from .permissions import IsSuperAdmin
+from .permissions import IsSuperAdmin, IsStaffOrSuperAdmin
 
 
 # ====================== LOGIN ======================
@@ -105,3 +105,24 @@ class StaffDetailView(APIView):
             "success": True,
             "message": "Staff deleted successfully"
         }, status=status.HTTP_204_NO_CONTENT)
+
+
+# ====================== ID VERIFICATION ======================
+class VerifyUniversityUserView(APIView):
+    permission_classes = [IsAuthenticated, IsStaffOrSuperAdmin]
+
+    def get(self, request, university_id):
+        try:
+            user = CustomUser.objects.get(university_id=university_id)
+            # Only return users who actually belong to the university side
+            # (student, faculty, staff)
+            if user.role not in ['student', 'faculty', 'staff', 'superadmin']:
+                return Response({"error": "User is not part of the university"}, status=status.HTTP_404_NOT_FOUND)
+                
+            serializer = UserSerializer(user)
+            return Response({
+                "success": True,
+                "user": serializer.data
+            })
+        except CustomUser.DoesNotExist:
+            return Response({"error": "User with this university ID not found"}, status=status.HTTP_404_NOT_FOUND)

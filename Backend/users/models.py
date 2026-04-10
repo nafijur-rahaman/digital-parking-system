@@ -5,13 +5,16 @@ class CustomUser(AbstractUser):
     ROLE_CHOICES = [
         ('superadmin', 'Super Admin'),
         ('staff', 'Staff'),
+        ('student', 'Student'),
+        ('faculty', 'Faculty'),
     ]
     
     role = models.CharField(
         max_length=20, 
         choices=ROLE_CHOICES, 
-        default='staff'
+        default='student'
     )
+    university_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
     full_name = models.CharField(max_length=150, blank=True)
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=15, blank=True, null=True)

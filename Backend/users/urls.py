@@ -3,6 +3,7 @@ from .views import (
     LoginView,
     StaffListCreateView,
     StaffDetailView,
+    VerifyUniversityUserView,
 )
 
 urlpatterns = [
@@ -14,4 +15,6 @@ urlpatterns = [
     path('user/update-staff/<int:pk>/', StaffDetailView.as_view(), name='update-staff'),
     path('user/delete-staff/<int:pk>/', StaffDetailView.as_view(), name='delete-staff'),
 
+    # ID Verification
+    path('users/verify/<str:university_id>/', VerifyUniversityUserView.as_view(), name='verify-university-user'),
 ]

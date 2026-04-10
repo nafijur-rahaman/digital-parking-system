@@ -13,3 +13,8 @@ class IsSuperAdminOrReadOnly(BasePermission):
         if request.user.role == 'superadmin':
             return True
         return request.method in ['GET', 'HEAD', 'OPTIONS']  # safe methods
+
+class IsStaffOrSuperAdmin(BasePermission):
+    """Only Staff and Superadmin can access this view"""
+    def has_permission(self, request, view):
+        return request.user.is_authenticated and request.user.role in ['staff', 'superadmin']
