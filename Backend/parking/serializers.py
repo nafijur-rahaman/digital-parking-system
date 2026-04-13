@@ -31,6 +31,6 @@ class BookingSerializer(serializers.ModelSerializer):
         model = Booking
         fields = [
             'id', 'created_by_username', 'university_member_name', 'parking_lot', 'parking_lot_name',
-            'start_time', 'end_time', 'status', 'vehicle_number', 'created_at'
+            'start_time', 'end_time', 'status', 'vehicle_number', 'exit_token', 'created_at'
         ]
-        read_only_fields = ['status']
+        read_only_fields = ['status', 'exit_token']

@@ -1,4 +1,3 @@
-import { createContext, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import DashboardLayout from './components/layout/DashboardLayout';
 import LoginPage from './pages/LoginPage';
@@ -6,11 +5,17 @@ import LiveMapPage from './pages/LiveMapPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
-
-export const RoleContext = createContext();
+import { RoleContext } from './context/RoleContext';
 
 const ProtectedRoutes = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  // Prevent flash of login page while rehydrating from localStorage
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-8 h-8 border-2 border-teal-500/30 border-t-teal-400 rounded-full animate-spin" />
+    </div>
+  );
 
   if (!user) return <LoginPage />;
 

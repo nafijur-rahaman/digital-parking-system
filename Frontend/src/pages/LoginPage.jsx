@@ -5,7 +5,7 @@ import { Eye, EyeOff, Lock, User, Navigation, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
-  const [id, setId] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -18,14 +18,11 @@ const LoginPage = () => {
     setError('');
     setIsLoading(true);
 
-    // Simulate a small delay for UX
-    await new Promise((r) => setTimeout(r, 800));
-
-    const result = login(id.trim(), password.trim());
+    const result = await login(username.trim(), password.trim());
     if (result.success) {
       navigate(result.role === 'superadmin' ? '/admin' : '/');
     } else {
-      setError('Invalid credentials. Please check your ID and password.');
+      setError(result.error || 'Invalid credentials. Please try again.');
     }
     setIsLoading(false);
   };
@@ -51,12 +48,11 @@ const LoginPage = () => {
         transition={{ duration: 0.5, ease: 'easeOut' }}
         className="w-full max-w-md mx-4 relative z-10"
       >
-        {/* Card */}
         <div className="glass-panel rounded-3xl p-8 shadow-2xl border border-white/10">
-          
+
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0, rotate: -180 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
@@ -64,7 +60,7 @@ const LoginPage = () => {
             >
               <Navigation className="h-8 w-8" />
             </motion.div>
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
@@ -72,7 +68,7 @@ const LoginPage = () => {
             >
               UniPark Access
             </motion.h1>
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
@@ -84,23 +80,23 @@ const LoginPage = () => {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* ID Field */}
+            {/* Username */}
             <div>
-              <label className="text-xs font-bold text-gray-400 tracking-widest block mb-2">STAFF / ADMIN ID</label>
+              <label className="text-xs font-bold text-gray-400 tracking-widest block mb-2">USERNAME</label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                 <input
                   type="text"
-                  id="login-id"
-                  value={id}
-                  onChange={(e) => { setId(e.target.value); setError(''); }}
-                  placeholder="Enter your ID"
+                  id="login-username"
+                  value={username}
+                  onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                  placeholder="Enter your username"
                   className="w-full bg-black/50 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all placeholder:text-gray-600"
                 />
               </div>
             </div>
 
-            {/* Password Field */}
+            {/* Password */}
             <div>
               <label className="text-xs font-bold text-gray-400 tracking-widest block mb-2">PASSWORD</label>
               <div className="relative">
@@ -123,7 +119,7 @@ const LoginPage = () => {
               </div>
             </div>
 
-            {/* Error Message */}
+            {/* Error */}
             <AnimatePresence>
               {error && (
                 <motion.div
@@ -138,7 +134,7 @@ const LoginPage = () => {
               )}
             </AnimatePresence>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -155,13 +151,10 @@ const LoginPage = () => {
                   />
                   Authenticating...
                 </span>
-              ) : (
-                'Sign In'
-              )}
+              ) : 'Sign In'}
             </motion.button>
           </form>
 
-          {/* Footer hint */}
           <p className="text-center text-xs text-gray-600 mt-6">
             Authorized personnel only. All activity is monitored.
           </p>

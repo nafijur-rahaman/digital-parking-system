@@ -2,7 +2,7 @@ import { useContext, useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { Search, User, Navigation, Shield, ChevronDown, UserCircle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RoleContext } from '../../AppRoutes';
+import { RoleContext } from '../../context/RoleContext';
 import { useAuth } from '../../context/AuthContext';
 
 const navItemClass = ({ isActive }) =>
