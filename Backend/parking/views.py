@@ -6,6 +6,9 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.core.mail import send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.utils import timezone
 import random
 import string
 
@@ -75,8 +78,7 @@ class ParkingLotDetailView(APIView):
         lot = self.get_object(pk)
         if not lot:
             return Response({"error": "Parking lot not found"}, status=status.HTTP_404_NOT_FOUND)
-        
-        # Optional: Prevent delete if there are active bookings
+      
         if lot.bookings.filter(status='active').exists():
             return Response({"error": "Cannot delete lot with active bookings"}, 
                           status=status.HTTP_400_BAD_REQUEST)
@@ -136,27 +138,45 @@ class BookingListCreateView(APIView):
         )
 
         try:
-            booking.save()  # This triggers clean() → overlap + capacity check
+            booking.save()  
             
-            # Space is occupied upon booking creation
+      
             parking_lot.current_occupied += 1
             parking_lot.save(update_fields=['current_occupied'])
 
             # Send Email
-            try:
-                send_mail(
-                    subject="Your Digital Parking Booking Confirmed",
-                    message=f"Hello {member.full_name},\n\nYour parking space has been booked successfully.\n\nYour Exit Token is: {exit_token}\n\nPlease keep this token safe to give to the staff when you exit the parking lot.",
-                    from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[member.email],
-                    fail_silently=True,
-                )
-            except Exception:
-                pass
+            email_sent = False
+            email_error = None
+            if member.email and settings.EMAIL_HOST_USER and settings.EMAIL_HOST_PASSWORD:
+                try:
+                    html_message = render_to_string(
+                        "confirm_booking.html",
+                        {
+                            "member": member,
+                            "booking": booking,
+                            "exit_token": exit_token,
+                            "sent_at": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        },
+                    )
+                    text_message = strip_tags(html_message)
+                    send_mail(
+                        subject="Your Digital Parking Booking Confirmed",
+                        message=text_message,
+                        from_email=settings.EMAIL_HOST_USER,
+                        recipient_list=[member.email],
+                        html_message=html_message,
+                        fail_silently=not settings.DEBUG,
+                    )
+                    email_sent = True
+                except Exception as e:
+                    if settings.DEBUG:
+                        email_error = str(e)
             
             return Response({
                 "message": "Booking created successfully",
-                "booking": BookingSerializer(booking).data
+                "booking": BookingSerializer(booking).data,
+                "email_sent": email_sent,
+                **({"email_error": email_error} if email_error else {}),
             }, status=status.HTTP_201_CREATED)
         except ValidationError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
