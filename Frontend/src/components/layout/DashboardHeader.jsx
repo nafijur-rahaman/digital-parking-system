@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Search, User, Navigation, Shield, ChevronDown, UserCircle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RoleContext } from '../../context/RoleContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/auth';
 
 const navItemClass = ({ isActive }) =>
   `relative px-1 pb-2 transition-colors text-sm font-medium ${isActive

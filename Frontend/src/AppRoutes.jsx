@@ -4,18 +4,12 @@ import LoginPage from './pages/LoginPage';
 import LiveMapPage from './pages/LiveMapPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthProvider';
+import { useAuth } from './context/auth';
 import { RoleContext } from './context/RoleContext';
 
 const ProtectedRoutes = () => {
-  const { user, loading } = useAuth();
-
-  // Prevent flash of login page while rehydrating from localStorage
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-teal-500/30 border-t-teal-400 rounded-full animate-spin" />
-    </div>
-  );
+  const { user } = useAuth();
 
   if (!user) return <LoginPage />;
 
