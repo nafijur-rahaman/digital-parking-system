@@ -56,7 +56,7 @@ class Booking(models.Model):
     parking_lot = models.ForeignKey(ParkingLot, on_delete=models.CASCADE, related_name='bookings')
     
     start_time = models.DateTimeField()
-    end_time = models.DateTimeField()
+    end_time = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
     
     vehicle_number = models.CharField(max_length=20, blank=True, help_text="Optional: License plate")
@@ -68,20 +68,17 @@ class Booking(models.Model):
         ordering = ['-start_time']
 
     def clean(self):
-        if self.start_time >= self.end_time:
-            raise ValidationError("End time must be after start time.")
+        if self.status == 'completed':
+            if not self.end_time:
+                raise ValidationError("End time is required when a booking is completed.")
+            if self.start_time and self.end_time < self.start_time:
+                raise ValidationError("End time cannot be before start time.")
 
-        # Check if there is space available during this time
         if self.status == 'active':
-            overlapping_bookings = Booking.objects.filter(
-                parking_lot=self.parking_lot,
-                status='active',
-                start_time__lt=self.end_time,
-                end_time__gt=self.start_time,
-            ).exclude(pk=self.pk)
-
-            if overlapping_bookings.count() >= self.parking_lot.total_capacity:
-                raise ValidationError(f"No space available in {self.parking_lot.name} during this time.")
+            if not self.parking_lot.is_active:
+                raise ValidationError("This parking lot is currently inactive.")
+            if self.parking_lot.current_occupied >= self.parking_lot.total_capacity:
+                raise ValidationError(f"No space available in {self.parking_lot.name}.")
 
     def save(self, *args, **kwargs):
         self.clean()
