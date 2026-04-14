@@ -3,6 +3,7 @@ import StatsGrid from '../components/stats/StatsGrid';
 import ParkingMapPanel from '../components/map/ParkingMapPanel';
 import EntryLogPanel from '../components/logs/EntryLogPanel';
 import { getAllParkingLots, getAllBookings } from '../services/api';
+import { formatTimeDhaka } from '../utils/datetime';
 
 const LiveMapPage = () => {
   const [lots, setLots] = useState([]);
@@ -10,7 +11,7 @@ const LiveMapPage = () => {
   const [loading, setLoading] = useState(true);
   const [sensorEvent, setSensorEvent] = useState({
     text: 'Monitoring entrance and exit scanners',
-    time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+    time: formatTimeDhaka(new Date()),
   });
 
   const fetchData = useCallback(async () => {
@@ -57,7 +58,7 @@ const LiveMapPage = () => {
   const handleBookingCreated = (booking, memberName) => {
     setSensorEvent({
       text: `Entry: ${memberName} assigned to ${booking.parking_lot_name}. Exit token emailed.`,
-      time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+      time: formatTimeDhaka(new Date()),
     });
     fetchData();
   };
@@ -65,7 +66,7 @@ const LiveMapPage = () => {
   const handleVehicleExited = (booking) => {
     setSensorEvent({
       text: `Exit: Booking #${booking.id} in ${booking.parking_lot_name} marked complete. Space freed.`,
-      time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+      time: formatTimeDhaka(new Date()),
     });
     fetchData();
   };
