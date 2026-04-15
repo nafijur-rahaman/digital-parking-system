@@ -238,7 +238,7 @@ const SuperAdminDashboard = () => {
           <p className="section-label" style={{ marginBottom: 12 }}>Quick Links</p>
           <NavLink to="/terminal"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, background: 'rgba(45,212,191,0.07)', border: '1px solid rgba(45,212,191,0.18)', color: 'var(--teal)', fontSize: 13, fontWeight: 600, textDecoration: 'none', transition: 'all 0.15s' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8,  }}>
               <Activity style={{ width: 14, height: 14 }} /> Live Terminal
             </span>
             <ArrowRight style={{ width: 13, height: 13 }} />
@@ -246,7 +246,7 @@ const SuperAdminDashboard = () => {
           <button
             type="button"
             onClick={handleLogout}
-            className="w-full flex items-center justify-between p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 hover:bg-rose-500/15 hover:border-rose-500/35 transition-all font-semibold text-sm"
+            className="w-full flex items-center justify-between p-3 mt-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 hover:bg-rose-500/15 hover:border-rose-500/35 transition-all font-semibold text-sm"
           >
             <span className="flex items-center gap-2"><LogOut className="w-4 h-4" /> Sign Out</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />

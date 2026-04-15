@@ -4,6 +4,7 @@ import { Navigation2, Shield, User, ChevronDown, UserCircle, LogOut, Settings } 
 import { motion, AnimatePresence } from 'framer-motion';
 import { RoleContext } from '../../context/RoleContext';
 import { useAuth } from '../../context/auth';
+import Modal from '../ui/Modal';
 
 const NavItem = ({ to, label }) => (
   <NavLink to={to} className={({ isActive }) =>
@@ -31,6 +32,9 @@ export default function DashboardHeader() {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const isSuperAdmin = role === 'superadmin';
+
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -126,14 +130,13 @@ export default function DashboardHeader() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="p-1.5">
-                    <button onClick={() => setOpen(false)}
+                    <button onClick={() => { setOpen(false); setProfileOpen(true); }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13px] text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.05] transition-colors">
                       <UserCircle className="h-4 w-4 flex-shrink-0" />
                       View Profile
                     </button>
-                    <button onClick={() => setOpen(false)}
+                    <button onClick={() => { setOpen(false); setSettingsOpen(true); }}
                       className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13px] text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.05] transition-colors">
                       <Settings className="h-4 w-4 flex-shrink-0" />
                       Settings
@@ -153,6 +156,42 @@ export default function DashboardHeader() {
           </div>
         </div>
       </motion.header>
+
+      {/* --- Modals --- */}
+      <Modal isOpen={profileOpen} onClose={() => setProfileOpen(false)} title="My Profile">
+        <div className="space-y-5">
+          <div className="flex items-center gap-4 pb-4 border-b border-white/[0.06]">
+            <div className={`w-14 h-14 rounded-[14px] flex items-center justify-center text-[18px] font-[800] 
+                ${isSuperAdmin ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-teal-500 to-cyan-600'} text-white shadow-lg`}>
+              {initials}
+            </div>
+            <div>
+              <p className="text-[16px] font-[700] text-white tracking-tight leading-tight">{user?.full_name || user?.username || 'User'}</p>
+              <span className={`inline-block mt-1.5 px-2.5 py-0.5 rounded-[6px] text-[10px] font-[700] uppercase tracking-wider
+                  ${isSuperAdmin ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'bg-teal-500/10 text-teal-400 border border-teal-500/20'}`}>
+                {isSuperAdmin ? 'Super Admin' : 'Gate Staff'}
+              </span>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <div>
+              <p className="text-[11px] text-[var(--text-muted)] font-[500] uppercase tracking-wide mb-1">Username</p>
+              <p className="text-[14px] text-white font-mono bg-white/[0.03] border border-white/[0.05] px-3 py-2 rounded-[8px]">{user?.username || 'N/A'}</p>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="System Settings">
+        <div className="py-10 flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 rounded-full bg-white/[0.03] flex items-center justify-center border border-white/[0.08] mb-4">
+            <Settings className="w-5 h-5 text-[var(--text-muted)]" />
+          </div>
+          <p className="text-[14px] font-[500] text-white">This feature will update later.</p>
+          <p className="text-[12px] text-[var(--text-muted)] mt-1 max-w-[200px]">Advanced settings are currently under development.</p>
+        </div>
+      </Modal>
+
     </div>
   );
 }
