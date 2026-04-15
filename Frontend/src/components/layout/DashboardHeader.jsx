@@ -1,157 +1,158 @@
 import { useContext, useState, useRef, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, User, Navigation, Shield, ChevronDown, UserCircle, LogOut } from 'lucide-react';
+import { Navigation2, Shield, User, ChevronDown, UserCircle, LogOut, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RoleContext } from '../../context/RoleContext';
 import { useAuth } from '../../context/auth';
 
-const navItemClass = ({ isActive }) =>
-  `relative px-1 pb-2 transition-colors text-sm font-medium ${isActive
-    ? 'text-teal-400 font-semibold'
-    : 'text-gray-400 hover:text-white'}`;
+const NavItem = ({ to, label }) => (
+  <NavLink to={to} className={({ isActive }) =>
+    `relative text-[13px] font-[500] px-1 pb-2 transition-colors duration-150 ${isActive ? 'text-white' : 'text-[var(--text-secondary)] hover:text-white'}`
+  }>
+    {({ isActive }) => (
+      <>
+        {label}
+        {isActive && (
+          <motion.div
+            layoutId="nav-pill"
+            className="absolute -bottom-px left-0 right-0 h-[2px] rounded-full bg-[var(--teal)] shadow-[0_0_8px_rgba(45,212,191,0.8)]"
+            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          />
+        )}
+      </>
+    )}
+  </NavLink>
+);
 
-const DashboardHeader = () => {
+export default function DashboardHeader() {
   const { role } = useContext(RoleContext);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const isSuperAdmin = role === 'superadmin';
 
-  // Close dropdown on outside click
   useEffect(() => {
-    const handler = (e) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setDropdownOpen(false);
-      }
-    };
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-    setDropdownOpen(false);
-  };
+  const handleLogout = () => { logout(); navigate('/'); };
+
+  const initials = (user?.name || user?.username || 'U')
+    .split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      className="max-w-[1600px] mx-auto flex items-center justify-between mb-8 glass-panel px-6 py-4 rounded-2xl"
-    >
-      {/* Left — Logo + Search */}
-      <div className="flex items-center gap-8">
-        <h1 className="text-xl font-bold text-white flex items-center gap-3 tracking-wide">
-          <div className="bg-teal-500/20 text-teal-400 p-2 rounded-lg border border-teal-500/30 shadow-[0_0_15px_rgba(20,184,166,0.3)]">
-            <Navigation className="h-6 w-6" />
+    <div className="relative z-50 mb-6">
+      <motion.header
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="max-w-[1600px] mx-auto glass rounded-[18px] px-6 py-3.5 flex items-center justify-between"
+      >
+        {/* ── LEFT: Wordmark ── */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-gradient-to-br from-teal-500/25 to-teal-400/10 rounded-[10px] border border-teal-500/20 flex items-center justify-center">
+              <Navigation2 className="h-4 w-4 text-teal-400" />
+            </div>
+            <span className="text-[15px] font-[800] text-white tracking-[-0.03em]">UniPark</span>
           </div>
-          UniPark Access
-        </h1>
-        <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 transition-colors group-focus-within:text-teal-400" />
-          <input
-            type="text"
-            placeholder="Search spaces or IDs..."
-            className="bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-sm w-64 focus:outline-none focus:ring-1 focus:ring-teal-500/50 transition-all text-white placeholder:text-gray-600"
-          />
+
+          {/* Nav links (superadmin only) */}
+          {isSuperAdmin && (
+            <nav className="flex items-center gap-7 pt-2">
+              <NavItem to="/admin" label="Admin Hub" />
+              <NavItem to="/terminal" label="Live Terminal" />
+              <NavItem to="/analytics" label="Analytics" />
+            </nav>
+          )}
         </div>
-      </div>
 
-      {/* Right — Nav + User */}
-      <div className="flex items-center gap-8">
-        {/* Navigation — only for superadmin */}
-        {role === 'superadmin' && (
-          <nav className="flex gap-8 pt-2">
-            <NavLink to="/admin" className={navItemClass}>
-              {({ isActive }) => (
-                <>
-                  Admin Hub
-                  {isActive && <motion.div layoutId="navIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.8)] rounded-full" />}
-                </>
+        {/* ── RIGHT: Live badge + User ── */}
+        <div className="flex items-center gap-4">
+          {/* Live indicator */}
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-teal-500/8 border border-teal-500/15">
+            <span className="live-dot flex-shrink-0" />
+            <span className="text-[11px] font-[600] text-teal-400 tracking-wide">Live</span>
+          </div>
+
+          {/* User menu */}
+          <div className="relative" ref={ref}>
+            <button
+              onClick={() => setOpen(v => !v)}
+              className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-[12px] border border-transparent hover:border-[var(--border-base)] hover:bg-white/[0.04] transition-all duration-150"
+            >
+              {/* Avatar */}
+              <div className={`w-8 h-8 rounded-[10px] flex items-center justify-center text-[12px] font-[800] tracking-wide flex-shrink-0
+                ${isSuperAdmin
+                  ? 'bg-gradient-to-br from-purple-500 to-indigo-600 text-white'
+                  : 'bg-gradient-to-br from-teal-500 to-cyan-600 text-white'
+                }`}>
+                {initials}
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-[13px] font-[600] text-white leading-tight">{user?.name || user?.username}</p>
+                <p className={`text-[10px] font-[700] tracking-wide uppercase leading-tight ${isSuperAdmin ? 'text-purple-400' : 'text-teal-400'}`}>
+                  {isSuperAdmin ? 'Super Admin' : 'Staff'}
+                </p>
+              </div>
+              <ChevronDown className={`h-3.5 w-3.5 text-[var(--text-muted)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown */}
+            <AnimatePresence>
+              {open && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -8, scale: 0.95, transition: { duration: 0.15 } }}
+                  transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                  className="absolute right-0 top-full mt-2 w-56 z-[9999] glass rounded-[16px] overflow-hidden shadow-[0_16px_48px_rgba(0,0,0,0.6)]"
+                  style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                  {/* User info */}
+                  <div className="px-4 py-3.5 border-b border-white/[0.06]">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center text-[12px] font-[800] flex-shrink-0
+                        ${isSuperAdmin ? 'bg-gradient-to-br from-purple-500 to-indigo-600' : 'bg-gradient-to-br from-teal-500 to-cyan-600'} text-white`}>
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-[600] text-white truncate">{user?.name || user?.username}</p>
+                        <p className="text-[11px] text-[var(--text-muted)] truncate">{isSuperAdmin ? 'Super Administrator' : 'Gate Staff'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="p-1.5">
+                    <button onClick={() => setOpen(false)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13px] text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.05] transition-colors">
+                      <UserCircle className="h-4 w-4 flex-shrink-0" />
+                      View Profile
+                    </button>
+                    <button onClick={() => setOpen(false)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13px] text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.05] transition-colors">
+                      <Settings className="h-4 w-4 flex-shrink-0" />
+                      Settings
+                    </button>
+                  </div>
+
+                  <div className="p-1.5 border-t border-white/[0.06]">
+                    <button onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[10px] text-[13px] text-red-400 hover:text-red-300 hover:bg-red-500/[0.08] transition-colors">
+                      <LogOut className="h-4 w-4 flex-shrink-0" />
+                      Sign Out
+                    </button>
+                  </div>
+                </motion.div>
               )}
-            </NavLink>
-            <NavLink to="/terminal" className={navItemClass}>
-              {({ isActive }) => (
-                <>
-                  Live Terminal
-                  {isActive && <motion.div layoutId="navIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.8)] rounded-full" />}
-                </>
-              )}
-            </NavLink>
-            <NavLink to="/analytics" className={navItemClass}>
-              {({ isActive }) => (
-                <>
-                  Analytics
-                  {isActive && <motion.div layoutId="navIndicator" className="absolute bottom-0 left-0 right-0 h-0.5 bg-teal-400 shadow-[0_0_8px_rgba(45,212,191,0.8)] rounded-full" />}
-                </>
-              )}
-            </NavLink>
-          </nav>
-        )}
-
-        {/* User Dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setDropdownOpen((v) => !v)}
-            className="flex items-center gap-3 bg-black/30 pl-3 pr-3 py-2 rounded-full border border-white/5 hover:border-white/15 transition-all glass-panel-hover"
-          >
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-white leading-tight">{user?.name}</p>
-              <p className="text-xs font-bold tracking-wider uppercase" style={{ color: role === 'superadmin' ? '#a78bfa' : '#2dd4bf' }}>
-                {role === 'superadmin' ? 'Super Admin' : 'Staff'}
-              </p>
-            </div>
-            <div className={`h-9 w-9 rounded-full flex items-center justify-center shadow-lg ${role === 'superadmin' ? 'bg-gradient-to-tr from-purple-500 to-indigo-500' : 'bg-gradient-to-tr from-teal-500 to-blue-500'}`}>
-              {role === 'superadmin' ? <Shield className="text-white h-4 w-4" /> : <User className="text-white h-4 w-4" />}
-            </div>
-            <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {/* Dropdown Menu */}
-          <AnimatePresence>
-            {dropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 mt-3 w-52 glass-panel rounded-xl border border-white/10 shadow-2xl overflow-hidden z-50"
-              >
-                {/* Profile Info */}
-                <div className="px-4 py-3 border-b border-white/5">
-                  <p className="text-sm font-bold text-white truncate">{user?.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{user?.email}</p>
-                </div>
-
-                {/* Menu Items */}
-                <div className="py-1">
-                  <button
-                    onClick={() => { setDropdownOpen(false); /* navigate('/profile') later */ }}
-                    className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
-                  >
-                    <UserCircle className="h-4 w-4 text-gray-500" />
-                    View Profile
-                  </button>
-                </div>
-
-                {/* Logout */}
-                <div className="border-t border-white/5 py-1">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign Out
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
-    </motion.header>
+      </motion.header>
+    </div>
   );
-};
-
-export default DashboardHeader;
+}

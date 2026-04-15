@@ -11,47 +11,80 @@ import {
   getAllParkingLots, createParkingLot, deleteParkingLot,
   getAllBookings,
 } from '../services/api';
+import { useToast } from '../context/ToastContext';
 
+/* ── Feedback banner ───────────────────────────────────────── */
 const FeedbackBanner = ({ type, message }) => {
   if (!message) return null;
-  const isError = type === 'error';
+  const isErr = type === 'error';
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm mb-4 ${isError ? 'bg-red-500/10 border border-red-500/30 text-red-400' : 'bg-teal-500/10 border border-teal-500/30 text-teal-400'}`}
-    >
-      {isError ? <AlertCircle className="h-4 w-4 flex-shrink-0" /> : <CheckCircle className="h-4 w-4 flex-shrink-0" />}
-      {message}
+    <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+      style={{
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+        padding: '12px 14px', borderRadius: 12, marginBottom: 20,
+        background: isErr ? 'rgba(248,113,113,0.07)' : 'rgba(52,211,153,0.07)',
+        border: `1px solid ${isErr ? 'rgba(248,113,113,0.22)' : 'rgba(52,211,153,0.22)'}`,
+      }}>
+      {isErr
+        ? <AlertCircle style={{ width: 15, height: 15, color: '#F87171', flexShrink: 0, marginTop: 1 }} />
+        : <CheckCircle style={{ width: 15, height: 15, color: '#34D399', flexShrink: 0, marginTop: 1 }} />
+      }
+      <p style={{ fontSize: 13, color: isErr ? '#fca5a5' : '#6ee7b7', lineHeight: 1.45 }}>{message}</p>
     </motion.div>
   );
 };
 
+/* ── Shared form field ─────────────────────────────────────── */
+const Field = ({ label, optional, children }) => (
+  <div className="field">
+    <label className="label">
+      {label}
+      {optional && <span style={{ textTransform: 'none', letterSpacing: 'normal', fontWeight: 400, color: 'var(--text-dim)', fontSize: 10 }}> (optional)</span>}
+    </label>
+    {children}
+  </div>
+);
+
+/* ── Card panel ────────────────────────────────────────────── */
+const Panel = ({ children, style }) => (
+  <div style={{
+    background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,255,255,0.06)',
+    borderRadius: 16, padding: 24, ...style,
+  }}>
+    {children}
+  </div>
+);
+
+const PanelTitle = ({ children, color = '#A78BFA' }) => (
+  <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color, marginBottom: 20 }}>
+    {children}
+  </p>
+);
+
+/* ── Main component ────────────────────────────────────────── */
 const SuperAdminDashboard = () => {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('staff');
   const { logout } = useAuth();
   const navigate = useNavigate();
 
-  // Staff state
   const [staffList, setStaffList] = useState([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [staffFeedback, setStaffFeedback] = useState({ type: '', message: '' });
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffForm, setStaffForm] = useState({ username: '', password: '', full_name: '', email: '', phone: '', role: 'staff' });
 
-  // Lot state
   const [lots, setLots] = useState([]);
   const [lotsLoading, setLotsLoading] = useState(true);
   const [lotsFeedback, setLotsFeedback] = useState({ type: '', message: '' });
   const [lotsSubmitting, setLotsSubmitting] = useState(false);
   const [lotForm, setLotForm] = useState({ name: '', lot_type: 'general', location: '', description: '', total_capacity: 10 });
 
-  // Overview state
   const [overviewData, setOverviewData] = useState(null);
 
   useEffect(() => {
-    if (activeTab === 'staff') fetchStaff();
-    if (activeTab === 'slots') fetchLots();
+    if (activeTab === 'staff')    fetchStaff();
+    if (activeTab === 'slots')    fetchLots();
     if (activeTab === 'overview') fetchOverview();
   }, [activeTab]);
 
@@ -77,60 +110,82 @@ const SuperAdminDashboard = () => {
         lotCount: lotsRes.length,
         totalCapacity: lotsRes.reduce((s, l) => s + l.total_capacity, 0),
         totalOccupied: lotsRes.reduce((s, l) => s + l.current_occupied, 0),
-        activeBookings: (bookingsRes || []).filter((b) => b.status === 'active').length,
+        activeBookings: (bookingsRes || []).filter(b => b.status === 'active').length,
         totalBookings: (bookingsRes || []).length,
       });
     } catch { /* silent */ }
   };
 
-  // Staff CRUD
   const handleCreateStaff = async (e) => {
     e.preventDefault();
     setStaffSubmitting(true);
     setStaffFeedback({ type: '', message: '' });
     try {
       await createStaff(staffForm);
-      setStaffFeedback({ type: 'success', message: `Staff "${staffForm.username}" created successfully.` });
+      const msg = `Staff "${staffForm.username}" created successfully.`;
+      setStaffFeedback({ type: 'success', message: msg });
+      toast.success(msg);
       setStaffForm({ username: '', password: '', full_name: '', email: '', phone: '', role: 'staff' });
       fetchStaff();
     } catch (err) {
       const errMsg = err?.data ? Object.values(err.data).flat().join(' ') : 'Failed to create staff.';
       setStaffFeedback({ type: 'error', message: errMsg });
+      toast.error(errMsg);
     } finally { setStaffSubmitting(false); }
   };
 
   const handleDeleteStaff = async (pk, username) => {
     if (!window.confirm(`Delete staff "${username}"? This cannot be undone.`)) return;
-    try { await deleteStaff(pk); setStaffFeedback({ type: 'success', message: `Staff "${username}" deleted.` }); fetchStaff(); }
-    catch { setStaffFeedback({ type: 'error', message: 'Failed to delete staff.' }); }
+    try {
+      await deleteStaff(pk);
+      const msg = `Staff "${username}" deleted.`;
+      setStaffFeedback({ type: 'success', message: msg });
+      toast.success(msg);
+      fetchStaff();
+    } catch {
+      const msg = 'Failed to delete staff.';
+      setStaffFeedback({ type: 'error', message: msg });
+      toast.error(msg);
+    }
   };
 
-  // Lot CRUD
   const handleCreateLot = async (e) => {
     e.preventDefault();
     setLotsSubmitting(true);
     setLotsFeedback({ type: '', message: '' });
     try {
       await createParkingLot({ ...lotForm, total_capacity: parseInt(lotForm.total_capacity) });
-      setLotsFeedback({ type: 'success', message: `Lot "${lotForm.name}" created successfully.` });
+      const msg = `Lot "${lotForm.name}" created successfully.`;
+      setLotsFeedback({ type: 'success', message: msg });
+      toast.success(msg);
       setLotForm({ name: '', lot_type: 'general', location: '', description: '', total_capacity: 10 });
       fetchLots();
     } catch (err) {
       const errMsg = err?.data ? Object.values(err.data).flat().join(' ') : 'Failed to create parking lot.';
       setLotsFeedback({ type: 'error', message: errMsg });
+      toast.error(errMsg);
     } finally { setLotsSubmitting(false); }
   };
 
   const handleDeleteLot = async (pk, name) => {
     if (!window.confirm(`Delete lot "${name}"? This will fail if it has active bookings.`)) return;
-    try { await deleteParkingLot(pk); setLotsFeedback({ type: 'success', message: `Lot "${name}" deleted.` }); fetchLots(); }
-    catch (err) { setLotsFeedback({ type: 'error', message: err?.data?.error || 'Failed to delete lot.' }); }
+    try {
+      await deleteParkingLot(pk);
+      const msg = `Lot "${name}" deleted.`;
+      setLotsFeedback({ type: 'success', message: msg });
+      toast.success(msg);
+      fetchLots();
+    } catch (err) {
+      const msg = err?.data?.error || 'Failed to delete lot.';
+      setLotsFeedback({ type: 'error', message: msg });
+      toast.error(msg);
+    }
   };
 
   const sidebarItems = [
     { key: 'overview', icon: <LayoutDashboard className="w-4 h-4" />, label: 'System Overview' },
-    { key: 'staff', icon: <Users className="w-4 h-4" />, label: 'System Staffing' },
-    { key: 'slots', icon: <Server className="w-4 h-4" />, label: 'Parking Grid' },
+    { key: 'staff',    icon: <Users className="w-4 h-4" />,           label: 'Staff Provisioning' },
+    { key: 'slots',    icon: <Server className="w-4 h-4" />,           label: 'Parking Grid' },
   ];
 
   const handleLogout = () => {
@@ -139,27 +194,53 @@ const SuperAdminDashboard = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-      {/* Sidebar */}
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+      className="grid grid-cols-1 md:grid-cols-4 gap-5"
+    >
+      {/* ── Sidebar ── */}
       <div className="col-span-1 space-y-4">
-        <div className="glass-panel p-6 rounded-2xl">
-          <h2 className="text-sm font-bold text-gray-400 mb-4 tracking-widest uppercase flex items-center gap-2">
-            <Shield className="w-4 h-4 text-purple-400" /> Admin Tools
-          </h2>
-          <div className="space-y-2">
+        <div className="glass-panel rounded-[20px] p-5">
+          <div className="flex items-center gap-2 mb-5">
+            <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.22)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Shield style={{ width: 15, height: 15, color: '#A78BFA' }} />
+            </div>
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: 'white' }}>Admin Hub</p>
+              <p style={{ fontSize: 10, color: 'var(--text-muted)' }}>Control panel</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {sidebarItems.map(({ key, icon, label }) => (
               <button key={key} onClick={() => setActiveTab(key)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all border ${activeTab === key ? 'bg-purple-500/20 border-purple-500/50 text-purple-300' : 'bg-black/30 border-white/5 text-gray-400 hover:text-white hover:bg-white/5'}`}>
-                <span className="flex items-center gap-3 text-sm font-semibold">{icon} {label}</span>
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '10px 12px', borderRadius: 12, width: '100%', textAlign: 'left',
+                  fontSize: 13, fontWeight: 500, cursor: 'pointer', border: 'none',
+                  transition: 'all 0.15s',
+                  background: activeTab === key ? 'rgba(167,139,250,0.12)' : 'transparent',
+                  color: activeTab === key ? '#C4B5FD' : 'var(--text-secondary)',
+                  outline: activeTab === key ? '1px solid rgba(167,139,250,0.25)' : '1px solid transparent',
+                }}>
+                <span style={{ color: activeTab === key ? '#A78BFA' : 'var(--text-muted)' }}>{icon}</span>
+                {label}
+                {activeTab === key && <span style={{ marginLeft: 'auto', width: 6, height: 6, borderRadius: '50%', background: '#A78BFA', flexShrink: 0 }} />}
               </button>
             ))}
           </div>
         </div>
-        <div className="glass-panel p-6 rounded-2xl">
-          <h2 className="text-sm font-bold text-gray-400 mb-4 tracking-widest uppercase">Quick Links</h2>
-          <NavLink to="/terminal" className="w-full flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-teal-900/40 to-black/40 border border-teal-500/30 text-teal-300 hover:from-teal-800/50 transition-all font-semibold text-sm mb-3 group">
-            <span className="flex items-center gap-2"><Activity className="w-4 h-4" /> Live Terminal</span>
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+
+        {/* Quick link */}
+        <div className="glass-panel rounded-[20px] p-5">
+          <p className="section-label" style={{ marginBottom: 12 }}>Quick Links</p>
+          <NavLink to="/terminal"
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, background: 'rgba(45,212,191,0.07)', border: '1px solid rgba(45,212,191,0.18)', color: 'var(--teal)', fontSize: 13, fontWeight: 600, textDecoration: 'none', transition: 'all 0.15s' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Activity style={{ width: 14, height: 14 }} /> Live Terminal
+            </span>
+            <ArrowRight style={{ width: 13, height: 13 }} />
           </NavLink>
           <button
             type="button"
@@ -172,192 +253,246 @@ const SuperAdminDashboard = () => {
         </div>
       </div>
 
-      {/* Main */}
-      <div className="col-span-3 glass-panel p-8 rounded-2xl min-h-[600px]">
+      {/* ── Main panel ── */}
+      <div className="col-span-3 glass-panel rounded-[20px] p-7" style={{ minHeight: 600 }}>
         <AnimatePresence mode="wait">
 
-          {/* ── STAFF ── */}
+          {/* ── STAFF PROVISIONING ── */}
           {activeTab === 'staff' && (
-            <motion.div key="staff" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-white tracking-wide mb-1 flex items-center gap-3"><UserPlus className="text-purple-400 w-6 h-6" /> Staff Provisioning</h1>
-                <p className="text-sm text-gray-400">Create login credentials for new gate guards or administrative staff.</p>
-              </div>
-              <FeedbackBanner {...staffFeedback} />
-              <div className="grid grid-cols-2 gap-8">
-                <form onSubmit={handleCreateStaff} className="bg-black/40 border border-white/5 p-6 rounded-xl space-y-3">
-                  <h3 className="text-sm font-bold tracking-widest text-purple-400 mb-4">NEW CREDENTIALS</h3>
-                  {[
-                    { label: 'USERNAME (LOGIN)', key: 'username', type: 'text', placeholder: 'e.g. guard_01', req: true },
-                    { label: 'PASSWORD', key: 'password', type: 'password', placeholder: 'Min 6 characters', req: true },
-                    { label: 'FULL NAME', key: 'full_name', type: 'text', placeholder: 'e.g. John Smith', req: true },
-                    { label: 'EMAIL', key: 'email', type: 'email', placeholder: 'guard@university.edu', req: true },
-                    { label: 'PHONE (OPTIONAL)', key: 'phone', type: 'text', placeholder: '+8801700000000', req: false },
-                  ].map(({ label, key, type, placeholder, req }) => (
-                    <div key={key}>
-                      <label className="text-xs font-bold text-gray-500 mb-1 block">{label}</label>
-                      <input type={type} value={staffForm[key]} onChange={(e) => setStaffForm({ ...staffForm, [key]: e.target.value })}
-                        placeholder={placeholder} required={req}
-                        className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                    </div>
-                  ))}
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">ROLE</label>
-                    <select value={staffForm.role} onChange={(e) => setStaffForm({ ...staffForm, role: e.target.value })}
-                      className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500">
-                      <option value="staff">Staff (Gate Guard)</option>
-                      <option value="superadmin">Super Admin</option>
-                    </select>
+            <motion.div key="staff" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(167,139,250,0.12)', border: '1px solid rgba(167,139,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserPlus style={{ width: 15, height: 15, color: '#A78BFA' }} />
                   </div>
-                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={staffSubmitting}
-                    className="w-full bg-purple-600 hover:bg-purple-500 text-white text-sm font-bold uppercase tracking-widest rounded-lg py-3 mt-2 flex justify-center items-center gap-2 disabled:opacity-60">
-                    {staffSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><KeyRound className="w-4 h-4" /> Provision Account</>}
-                  </motion.button>
-                </form>
+                  <h1 style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>Staff Provisioning</h1>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginLeft: 42 }}>Create login credentials for gate guards or administrative staff.</p>
+              </div>
 
-                <div className="bg-black/40 border border-white/5 p-6 rounded-xl">
-                  <h3 className="text-sm font-bold tracking-widest text-gray-400 mb-4">ACTIVE STAFF ROSTER</h3>
+              <AnimatePresence>{staffFeedback.message && <FeedbackBanner {...staffFeedback} />}</AnimatePresence>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Form */}
+                <Panel>
+                  <PanelTitle>New Credentials</PanelTitle>
+                  <form onSubmit={handleCreateStaff} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <Field label="Username">
+                      <input type="text" value={staffForm.username} required
+                        onChange={e => setStaffForm({ ...staffForm, username: e.target.value })}
+                        placeholder="e.g. guard_01" className="input" />
+                    </Field>
+                    <Field label="Password">
+                      <input type="password" value={staffForm.password} required
+                        onChange={e => setStaffForm({ ...staffForm, password: e.target.value })}
+                        placeholder="Min 6 characters" className="input" />
+                    </Field>
+                    <Field label="Full Name">
+                      <input type="text" value={staffForm.full_name} required
+                        onChange={e => setStaffForm({ ...staffForm, full_name: e.target.value })}
+                        placeholder="e.g. John Smith" className="input" />
+                    </Field>
+                    <Field label="Email">
+                      <input type="email" value={staffForm.email} required
+                        onChange={e => setStaffForm({ ...staffForm, email: e.target.value })}
+                        placeholder="guard@university.edu" className="input" />
+                    </Field>
+                    <Field label="Phone" optional>
+                      <input type="text" value={staffForm.phone}
+                        onChange={e => setStaffForm({ ...staffForm, phone: e.target.value })}
+                        placeholder="+8801700000000" className="input" />
+                    </Field>
+                    <Field label="Role">
+                      <select value={staffForm.role} onChange={e => setStaffForm({ ...staffForm, role: e.target.value })} className="input">
+                        <option value="staff">Staff — Gate Guard</option>
+                        <option value="superadmin">Super Admin</option>
+                      </select>
+                    </Field>
+                    <button type="submit" disabled={staffSubmitting} className="btn btn-wide"
+                      style={{ background: 'linear-gradient(135deg, #5B21B6, #7C3AED)', color: 'white', border: '1px solid rgba(167,139,250,0.3)', fontWeight: 700, marginTop: 4, boxShadow: '0 0 20px rgba(124,58,237,0.2)' }}>
+                      {staffSubmitting
+                        ? <><span className="loader-ring" style={{ width: 16, height: 16 }} />Creating…</>
+                        : <><KeyRound style={{ width: 15, height: 15 }} />Provision Account</>
+                      }
+                    </button>
+                  </form>
+                </Panel>
+
+                {/* Staff roster */}
+                <Panel>
+                  <PanelTitle color="var(--text-muted)">Active Roster ({staffList.length})</PanelTitle>
                   {staffLoading ? (
-                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-purple-400" /></div>
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}><span className="loader-ring" /></div>
                   ) : staffList.length === 0 ? (
-                    <p className="text-gray-600 text-xs text-center py-8">No staff accounts yet.</p>
+                    <div style={{ textAlign: 'center', paddingTop: 40 }}>
+                      <Users style={{ width: 28, height: 28, color: 'var(--text-dim)', margin: '0 auto 8px' }} />
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No staff accounts yet.</p>
+                    </div>
                   ) : (
-                    <div className="space-y-3 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
-                      {staffList.map((s) => (
-                        <div key={s.id} className="flex justify-between items-center p-3 rounded-lg bg-white/5 border border-white/5">
-                          <div className="flex gap-3 items-center">
-                            <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400 font-bold text-xs">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }} className="custom-scrollbar">
+                      {staffList.map(s => (
+                        <div key={s.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(167,139,250,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#C4B5FD', flexShrink: 0 }}>
                               {(s.full_name || s.username).substring(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p className="font-bold text-sm text-white">{s.full_name || s.username}</p>
-                              <p className="text-xs text-gray-500">{s.email}</p>
+                              <p style={{ fontSize: 13, fontWeight: 600, color: 'white', lineHeight: 1.2 }}>{s.full_name || s.username}</p>
+                              <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.3 }}>{s.email}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] px-2 py-1 rounded font-bold ${s.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}`}>
-                              {s.is_active ? 'ACTIVE' : 'INACTIVE'}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span className={s.is_active ? 'badge badge-active' : 'badge badge-inactive'}>
+                              {s.is_active ? 'Active' : 'Inactive'}
                             </span>
                             <button onClick={() => handleDeleteStaff(s.id, s.username)}
-                              className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" />
+                              style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                              <Trash2 style={{ width: 14, height: 14 }} />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </Panel>
               </div>
             </motion.div>
           )}
 
-          {/* ── PARKING LOTS ── */}
+          {/* ── PARKING GRID ── */}
           {activeTab === 'slots' && (
-            <motion.div key="slots" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <div>
-                <h1 className="text-2xl font-bold text-white tracking-wide mb-1 flex items-center gap-3"><Plus className="text-purple-400 w-6 h-6" /> Parking Grid Allocation</h1>
-                <p className="text-sm text-gray-400">Initialize new parking sections into the live matrix system.</p>
+            <motion.div key="slots" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(45,212,191,0.1)', border: '1px solid rgba(45,212,191,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Plus style={{ width: 15, height: 15, color: '#2DD4BF' }} />
+                  </div>
+                  <h1 style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>Parking Grid</h1>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginLeft: 42 }}>Configure and deploy parking lots into the live monitoring system.</p>
               </div>
-              <FeedbackBanner {...lotsFeedback} />
-              <div className="grid grid-cols-2 gap-8">
-                <form onSubmit={handleCreateLot} className="bg-black/40 border border-white/5 p-6 rounded-xl space-y-3">
-                  <h3 className="text-sm font-bold tracking-widest text-purple-400 mb-4">NEW LOT PARAMETERS</h3>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">LOT NAME (UNIQUE)</label>
-                    <input type="text" value={lotForm.name} onChange={(e) => setLotForm({ ...lotForm, name: e.target.value })}
-                      placeholder="e.g. North_Block_A" required
-                      className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">LOT TYPE</label>
-                    <select value={lotForm.lot_type} onChange={(e) => setLotForm({ ...lotForm, lot_type: e.target.value })}
-                      className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500 appearance-none">
-                      <option value="general">General</option>
-                      <option value="faculty">Faculty Only</option>
-                      <option value="vip">VIP</option>
-                      <option value="disabled">Disabled</option>
-                      <option value="ev">EV Charging</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">LOCATION</label>
-                    <input type="text" value={lotForm.location} onChange={(e) => setLotForm({ ...lotForm, location: e.target.value })}
-                      placeholder="e.g. Behind Academic Building" required
-                      className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">TOTAL CAPACITY</label>
-                    <input type="number" min="1" value={lotForm.total_capacity}
-                      onChange={(e) => setLotForm({ ...lotForm, total_capacity: e.target.value })} required
-                      className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-gray-500 mb-1 block">DESCRIPTION (OPTIONAL)</label>
-                    <input type="text" value={lotForm.description} onChange={(e) => setLotForm({ ...lotForm, description: e.target.value })}
-                      placeholder="Any additional notes..."
-                      className="w-full bg-black border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500" />
-                  </div>
-                  <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} type="submit" disabled={lotsSubmitting}
-                    className="w-full bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold uppercase tracking-widest rounded-lg py-3 mt-2 flex justify-center items-center gap-2 disabled:opacity-60">
-                    {lotsSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : 'Deploy Space to Map'}
-                  </motion.button>
-                </form>
 
-                <div className="bg-black/40 border border-white/5 p-6 rounded-xl">
-                  <h3 className="text-sm font-bold tracking-widest text-gray-400 mb-4">INITIALIZED LOTS</h3>
+              <AnimatePresence>{lotsFeedback.message && <FeedbackBanner {...lotsFeedback} />}</AnimatePresence>
+
+              <div className="grid grid-cols-2 gap-6">
+                {/* Lot form */}
+                <Panel>
+                  <PanelTitle color="var(--teal)">New Lot Parameters</PanelTitle>
+                  <form onSubmit={handleCreateLot} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <Field label="Lot Name">
+                      <input type="text" value={lotForm.name} required
+                        onChange={e => setLotForm({ ...lotForm, name: e.target.value })}
+                        placeholder="e.g. North Block A" className="input" />
+                    </Field>
+                    <Field label="Lot Type">
+                      <select value={lotForm.lot_type} onChange={e => setLotForm({ ...lotForm, lot_type: e.target.value })} className="input">
+                        <option value="general">General</option>
+                        <option value="faculty">Faculty Only</option>
+                        <option value="vip">VIP</option>
+                        <option value="disabled">Disabled</option>
+                        <option value="ev">EV Charging</option>
+                      </select>
+                    </Field>
+                    <Field label="Location">
+                      <input type="text" value={lotForm.location} required
+                        onChange={e => setLotForm({ ...lotForm, location: e.target.value })}
+                        placeholder="e.g. Behind Academic Building" className="input" />
+                    </Field>
+                    <Field label="Total Capacity">
+                      <input type="number" min="1" value={lotForm.total_capacity} required
+                        onChange={e => setLotForm({ ...lotForm, total_capacity: e.target.value })}
+                        className="input" />
+                    </Field>
+                    <Field label="Description" optional>
+                      <input type="text" value={lotForm.description}
+                        onChange={e => setLotForm({ ...lotForm, description: e.target.value })}
+                        placeholder="Any additional notes…" className="input" />
+                    </Field>
+                    <button type="submit" disabled={lotsSubmitting} className="btn btn-primary btn-wide" style={{ marginTop: 4 }}>
+                      {lotsSubmitting
+                        ? <><span className="loader-ring" style={{ width: 16, height: 16 }} />Creating…</>
+                        : <><ParkingSquare style={{ width: 15, height: 15 }} />Deploy to Live Map</>
+                      }
+                    </button>
+                  </form>
+                </Panel>
+
+                {/* Lot list */}
+                <Panel>
+                  <PanelTitle color="var(--text-muted)">Initialized Lots ({lots.length})</PanelTitle>
                   {lotsLoading ? (
-                    <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-teal-400" /></div>
+                    <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}><span className="loader-ring" /></div>
                   ) : lots.length === 0 ? (
-                    <p className="text-gray-600 text-xs text-center py-8">No parking lots configured yet.</p>
+                    <div style={{ textAlign: 'center', paddingTop: 40 }}>
+                      <ParkingSquare style={{ width: 28, height: 28, color: 'var(--text-dim)', margin: '0 auto 8px' }} />
+                      <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No parking lots configured yet.</p>
+                    </div>
                   ) : (
-                    <div className="space-y-3 max-h-[380px] overflow-y-auto custom-scrollbar pr-1">
-                      {lots.map((lot) => (
-                        <div key={lot.id} className="flex justify-between items-center px-3 py-3 rounded-lg bg-teal-900/10 border border-teal-500/20">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }} className="custom-scrollbar">
+                      {lots.map(lot => (
+                        <div key={lot.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, background: 'rgba(45,212,191,0.04)', border: '1px solid rgba(45,212,191,0.12)' }}>
                           <div>
-                            <p className="font-bold text-sm text-white">{lot.name}</p>
-                            <p className="text-[10px] text-gray-500 capitalize">{lot.lot_type} · {lot.location}</p>
-                            <p className="text-[10px] text-teal-400 font-mono mt-0.5">{lot.current_occupied}/{lot.total_capacity} occupied</p>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: 'white', lineHeight: 1.2 }}>{lot.name}</p>
+                            <p style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'capitalize', lineHeight: 1.4 }}>{lot.lot_type} · {lot.location}</p>
+                            <p style={{ fontSize: 11, color: 'var(--teal)', fontFamily: 'var(--font-mono)', marginTop: 2 }}>
+                              {lot.current_occupied}/{lot.total_capacity} occupied
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] px-2 py-1 rounded font-bold ${lot.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                              {lot.is_active ? 'ACTIVE' : 'INACTIVE'}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span className={lot.is_active ? 'badge badge-active' : 'badge badge-inactive'}>
+                              {lot.is_active ? 'Active' : 'Inactive'}
                             </span>
                             <button onClick={() => handleDeleteLot(lot.id, lot.name)}
-                              className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                              <Trash2 className="w-3.5 h-3.5" />
+                              style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                              <Trash2 style={{ width: 14, height: 14 }} />
                             </button>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </Panel>
               </div>
             </motion.div>
           )}
 
           {/* ── OVERVIEW ── */}
           {activeTab === 'overview' && (
-            <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-6">
-              <h1 className="text-2xl font-bold text-white tracking-wide mb-2">System Hierarchy</h1>
-              <p className="text-sm text-gray-400">Live system stats pulled directly from the database.</p>
+            <motion.div key="overview" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}>
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(96,165,250,0.1)', border: '1px solid rgba(96,165,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <LayoutDashboard style={{ width: 15, height: 15, color: '#60A5FA' }} />
+                  </div>
+                  <h1 style={{ fontSize: 18, fontWeight: 700, color: 'white', letterSpacing: '-0.02em' }}>System Overview</h1>
+                </div>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginLeft: 42 }}>Live stats pulled directly from the database.</p>
+              </div>
               {!overviewData ? (
-                <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-purple-400" /></div>
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 64 }}><span className="loader-ring" /></div>
               ) : (
-                <div className="grid grid-cols-3 gap-4 mt-6">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginTop: 8 }}>
                   {[
-                    { label: 'Total Staff', value: overviewData.staffCount },
-                    { label: 'Parking Lots', value: overviewData.lotCount },
-                    { label: 'Total Capacity', value: overviewData.totalCapacity },
-                    { label: 'Currently Occupied', value: overviewData.totalOccupied },
-                    { label: 'Active Bookings', value: overviewData.activeBookings },
-                    { label: 'Total Bookings', value: overviewData.totalBookings },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="bg-black/40 border border-white/5 rounded-xl p-5 text-center">
-                      <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase mb-2">{label}</p>
-                      <p className="text-3xl font-bold text-white">{value}</p>
-                    </div>
+                    { label: 'Total Staff',         value: overviewData.staffCount,    color: '#A78BFA' },
+                    { label: 'Parking Lots',         value: overviewData.lotCount,      color: '#60A5FA' },
+                    { label: 'Total Capacity',       value: overviewData.totalCapacity, color: '#2DD4BF' },
+                    { label: 'Currently Occupied',   value: overviewData.totalOccupied, color: '#F87171' },
+                    { label: 'Active Bookings',      value: overviewData.activeBookings,color: '#34D399' },
+                    { label: 'All-Time Bookings',    value: overviewData.totalBookings, color: '#FBBF24' },
+                  ].map(({ label, value, color }) => (
+                    <motion.div key={label}
+                      whileHover={{ y: -3, transition: { type: 'spring', stiffness: 400, damping: 25 } }}
+                      style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, padding: '20px 20px 18px', textAlign: 'center', cursor: 'default' }}>
+                      <p className="section-label" style={{ marginBottom: 10 }}>{label}</p>
+                      <p style={{ fontSize: 32, fontWeight: 800, color, letterSpacing: '-0.04em', lineHeight: 1 }}>{value}</p>
+                    </motion.div>
                   ))}
                 </div>
               )}
@@ -366,7 +501,7 @@ const SuperAdminDashboard = () => {
 
         </AnimatePresence>
       </div>
-    </div>
+    </motion.div>
   );
 };
 

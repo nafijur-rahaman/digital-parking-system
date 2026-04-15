@@ -1,142 +1,180 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Radio } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Wifi } from 'lucide-react';
 
-// Auto-generate a visual grid from capacity & current_occupied
 const buildSlotGrid = (lot) => {
   const slots = [];
   for (let i = 0; i < lot.total_capacity; i++) {
     const num = String(i + 1).padStart(2, '0');
-    slots.push({
-      id: `${lot.name}-${num}`,
-      num,
-      occupied: i < lot.current_occupied,
-    });
+    slots.push({ id: `${lot.id}-${num}`, num, occupied: i < lot.current_occupied });
   }
   return slots;
 };
 
-const ParkingMapPanel = ({ lots, sensorEvent }) => {
-  const [activeTab, setActiveTab] = useState(0);
+export default function ParkingMapPanel({ lots, sensorEvent }) {
+  const [activeIdx, setActiveIdx] = useState(0);
 
   if (!lots || lots.length === 0) {
     return (
-      <div className="col-span-2 glass-panel rounded-2xl p-6 flex items-center justify-center bg-[#0B0E14]/80">
-        <p className="text-gray-500 text-sm">No parking lots configured yet. Go to Admin Hub → Parking Grid to add one.</p>
+      <div className="lg:col-span-2 glass rounded-[20px] p-8 flex flex-col items-center justify-center min-h-[400px] text-center">
+        <div className="w-16 h-16 rounded-[20px] bg-white/[0.04] border border-white/[0.07] flex items-center justify-center mb-4">
+          <svg className="h-7 w-7 text-[var(--text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+          </svg>
+        </div>
+        <h3 className="text-[15px] font-[600] text-white mb-2">No Parking Lots</h3>
+        <p className="text-[13px] text-[var(--text-secondary)] max-w-[260px] leading-relaxed">
+          Create your first parking lot from the Admin Hub → Parking Grid.
+        </p>
       </div>
     );
   }
 
-  const activeLot = lots[activeTab] || lots[0];
-  const slots = buildSlotGrid(activeLot);
+  const lot = lots[activeIdx] || lots[0];
+  const slots = buildSlotGrid(lot);
+  const freeCount = lot.available_spots;
+  const occupiedCount = lot.current_occupied;
+  const fillPct = lot.total_capacity > 0 ? Math.round((occupiedCount / lot.total_capacity) * 100) : 0;
 
   return (
-    <div className="col-span-2 glass-panel rounded-2xl p-6 relative overflow-hidden bg-[#0B0E14]/80">
-      <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-blue-600/5 rounded-full blur-[100px]"></div>
+    <div className="lg:col-span-2 glass rounded-[20px] overflow-hidden">
+      {/* Panel header */}
+      <div className="px-5 pt-5 pb-4 border-b border-white/[0.06]">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-[15px] font-[700] text-white tracking-[-0.02em]">Parking Space Map</h2>
+            <p className="text-[12px] text-[var(--text-secondary)] mt-0.5">Real-time vehicle placement data</p>
+          </div>
+          <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-teal-500/8 border border-teal-500/20">
+            <span className="live-dot" />
+            <motion.span
+              animate={{ opacity: [1, 0.5, 1] }}
+              transition={{ duration: 2.5, repeat: Infinity }}
+              className="text-[11px] font-[600] text-teal-400 flex items-center gap-1.5"
+            >
+              <Wifi className="h-3 w-3" />
+              Sensor Live
+            </motion.span>
+          </div>
+        </div>
 
-      {/* Lot tabs */}
-      <div className="flex justify-between items-center mb-6 relative z-10">
-        <div className="flex gap-2 flex-wrap">
-          {lots.map((lot, index) => (
+        {/* Lot tabs */}
+        <div className="flex gap-1.5 flex-wrap">
+          {lots.map((l, i) => (
             <button
-              key={lot.id}
-              onClick={() => setActiveTab(index)}
-              className={`px-3 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
-                index === activeTab
-                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]'
-                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5 border border-transparent'
+              key={l.id}
+              onClick={() => setActiveIdx(i)}
+              className={`px-3 py-1.5 rounded-[8px] text-[11px] font-[600] transition-all duration-150 ${
+                i === activeIdx
+                  ? 'bg-white/10 text-white border border-white/15'
+                  : 'text-[var(--text-secondary)] hover:text-white hover:bg-white/[0.05] border border-transparent'
               }`}
             >
-              {lot.name}
+              {l.name}
             </button>
           ))}
         </div>
-        <motion.span
-          animate={{ opacity: [1, 0.5, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="text-[10px] flex items-center gap-1.5 text-teal-400 font-bold uppercase tracking-widest bg-teal-900/20 px-3 py-1.5 rounded-full border border-teal-500/30 relative"
-        >
-          <span className="absolute inset-0 bg-teal-400/20 rounded-full blur-md"></span>
-          <Radio className="h-3 w-3 relative z-10" />
-          <span className="relative z-10">Live Sensor Matrix</span>
-        </motion.span>
       </div>
 
-      {/* Sensor event ticker */}
-      <motion.p
-        key={sensorEvent?.time}
-        initial={{ opacity: 0, y: -5 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-[10px] text-teal-300 mb-4 border border-teal-900/40 bg-teal-900/10 rounded-lg px-3 py-2 font-mono tracking-wide relative z-10"
-      >
-        <span className="text-gray-500 mr-2">{sensorEvent?.time}</span>
-        <span className="text-glow-green">{sensorEvent?.text}</span>
-      </motion.p>
+      <div className="p-5 space-y-4">
+        {/* Sensor ticker */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={sensorEvent?.time}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="flex items-center gap-3 px-3.5 py-2.5 rounded-[10px] border border-teal-500/15 bg-teal-500/[0.04]"
+          >
+            <span className="live-dot flex-shrink-0" />
+            <p className="text-[12px] leading-snug">
+              <span className="font-[500] font-mono text-[var(--text-muted)] mr-2">{sensorEvent?.time}</span>
+              <span className="text-[var(--text-secondary)]">{sensorEvent?.text}</span>
+            </p>
+          </motion.div>
+        </AnimatePresence>
 
-      {/* Lot stats */}
-      <div className="flex gap-3 mb-4 relative z-10">
-        <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg px-4 py-2 text-center">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Capacity</p>
-          <p className="text-xl font-bold text-white">{activeLot.total_capacity}</p>
+        {/* Stats strip */}
+        <div className="grid grid-cols-4 gap-3">
+          {[
+            { label: 'Capacity',   value: lot.total_capacity, color: '#60A5FA' },
+            { label: 'Occupied',   value: occupiedCount, color: fillPct >= 90 ? '#F87171' : '#2DD4BF' },
+            { label: 'Available',  value: freeCount,    color: '#34D399' },
+            { label: 'Fill Rate',  value: `${fillPct}%`, color: fillPct >= 90 ? '#F87171' : '#FBBF24' },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-[12px] p-3 text-center border border-white/[0.06]"
+              style={{ background: 'rgba(255,255,255,0.02)' }}>
+              <p className="section-label mb-1.5">{label}</p>
+              <p className="text-[20px] font-[800] tracking-[-0.03em] leading-none" style={{ color }}>{value}</p>
+            </div>
+          ))}
         </div>
-        <div className={`border rounded-lg px-4 py-2 text-center ${activeLot.current_occupied >= activeLot.total_capacity ? 'bg-red-500/10 border-red-500/20' : 'bg-teal-500/10 border-teal-500/20'}`}>
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Occupied</p>
-          <p className={`text-xl font-bold ${activeLot.current_occupied >= activeLot.total_capacity ? 'text-red-400' : 'text-teal-400'}`}>
-            {activeLot.current_occupied}
-          </p>
-        </div>
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-4 py-2 text-center">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Free</p>
-          <p className="text-xl font-bold text-emerald-400">{activeLot.available_spots}</p>
-        </div>
-        <div className="flex-1 bg-black/40 border border-white/5 rounded-lg px-4 py-2 flex items-center gap-2">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest w-12">Type</p>
-          <p className="text-xs font-bold text-purple-300 uppercase">{activeLot.lot_type}</p>
-          <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded ${activeLot.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-            {activeLot.is_active ? 'ACTIVE' : 'INACTIVE'}
-          </span>
-        </div>
-      </div>
 
-      {/* Visual slot grid */}
-      <div className="bg-black/40 rounded-xl p-6 border border-white/5 relative z-10 shadow-inner">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-[10px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-2">
-            <div className="h-1.5 w-1.5 rounded-full bg-blue-500"></div>
-            {activeLot.name} — Space Map
-          </h3>
-          <div className="flex gap-4">
-            <div className="flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 rounded bg-emerald-500/80"></span> Vacant</div>
-            <div className="flex items-center gap-1.5 text-[9px] text-gray-400 font-bold uppercase"><span className="w-2 h-2 rounded bg-teal-600"></span> Occupied</div>
+        {/* Occupancy bar */}
+        <div>
+          <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              animate={{ width: `${fillPct}%` }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
+              className="h-full rounded-full"
+              style={{
+                background: fillPct >= 90
+                  ? 'linear-gradient(90deg, #9F1239, #F87171)'
+                  : 'linear-gradient(90deg, #0D9488, #2DD4BF)',
+                boxShadow: fillPct >= 90
+                  ? '0 0 8px rgba(248,113,113,0.5)'
+                  : '0 0 8px rgba(45,212,191,0.4)',
+              }}
+            />
           </div>
         </div>
 
-        {slots.length === 0 ? (
-          <p className="text-gray-600 text-xs text-center py-8">Lot capacity is 0. Update the lot to add spaces.</p>
-        ) : (
-          <div className="grid grid-cols-6 gap-3 max-h-48 overflow-y-auto pr-1">
-            {slots.map((slot) => (
-              <motion.div
-                key={slot.id}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`flex flex-col items-center justify-center rounded-lg p-2 border text-center transition-all ${
-                  slot.occupied
-                    ? 'bg-teal-900/40 border-teal-600/50 shadow-[0_0_8px_rgba(20,184,166,0.2)]'
-                    : 'bg-emerald-900/10 border-emerald-500/20 hover:border-emerald-500/40'
-                }`}
-              >
-                <div className={`w-2 h-2 rounded-full mb-1 ${slot.occupied ? 'bg-teal-400' : 'bg-emerald-400'}`} />
-                <p className="text-[8px] font-bold text-gray-400 truncate w-full text-center">
-                  {slot.num}
-                </p>
-              </motion.div>
-            ))}
+        {/* Slot grid */}
+        <div className="rounded-[14px] p-4 border border-white/[0.05]" style={{ background: 'rgba(0,0,0,0.3)' }}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-[600] text-[var(--text-muted)]">{lot.name} — Space Layout</p>
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-[10px] font-[600] text-[var(--text-muted)]">
+                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: '#34D399' }} /> Free
+              </span>
+              <span className="flex items-center gap-1.5 text-[10px] font-[600] text-[var(--text-muted)]">
+                <span className="w-2 h-2 rounded-sm inline-block" style={{ background: '#F87171' }} /> Taken
+              </span>
+            </div>
           </div>
-        )}
+
+          {slots.length === 0 ? (
+            <p className="text-[12px] text-[var(--text-muted)] text-center py-6">Lot capacity is 0.</p>
+          ) : (
+            <div className="grid grid-cols-8 gap-1.5 max-h-[160px] overflow-y-auto custom-scrollbar">
+              {slots.map((slot) => (
+                <motion.div
+                  key={slot.id}
+                  initial={{ opacity: 0, scale: 0.7 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 350, damping: 24 }}
+                  title={`Space ${slot.num} — ${slot.occupied ? 'Occupied' : 'Free'}`}
+                  className="aspect-square rounded-[6px] flex items-center justify-center border relative overflow-hidden"
+                  style={{
+                    background: slot.occupied ? 'rgba(248,113,113,0.12)' : 'rgba(52,211,153,0.08)',
+                    borderColor: slot.occupied ? 'rgba(248,113,113,0.3)' : 'rgba(52,211,153,0.2)',
+                    boxShadow: slot.occupied
+                      ? '0 0 6px rgba(248,113,113,0.15)'
+                      : 'none',
+                  }}
+                >
+                  <span className="text-[8px] font-[700]"
+                    style={{ color: slot.occupied ? '#F87171' : '#34D399' }}>
+                    {slot.num}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
-};
-
-export default ParkingMapPanel;
+}

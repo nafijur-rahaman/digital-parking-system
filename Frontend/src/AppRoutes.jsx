@@ -7,6 +7,8 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import { AuthProvider } from './context/AuthProvider';
 import { useAuth } from './context/auth';
 import { RoleContext } from './context/RoleContext';
+import { ToastProvider } from './context/ToastContext';
+import ToastContainer from './components/ui/ToastContainer';
 
 const ProtectedRoutes = () => {
   const { user } = useAuth();
@@ -39,9 +41,13 @@ const ProtectedRoutes = () => {
 
 const AppRoutes = () => {
   return (
-    <AuthProvider>
-      <ProtectedRoutes />
-    </AuthProvider>
+    <ToastProvider>
+      {/* ToastContainer renders toasts over everything at z-[99999] */}
+      <ToastContainer />
+      <AuthProvider>
+        <ProtectedRoutes />
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 
