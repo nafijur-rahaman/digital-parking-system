@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.utils import timezone
+
+
 from users.models import CustomUser, UniversityMember
 
 
@@ -19,7 +20,9 @@ class ParkingLot(models.Model):
     description = models.TextField(blank=True)
     
     total_capacity = models.PositiveIntegerField(default=0, help_text="Total number of vehicles this lot can hold (e.g., 40)")
-    current_occupied = models.PositiveIntegerField(default=0, editable=False)
+    @property
+    def current_occupied(self):
+        return self.bookings.filter(status='active').count()
     
     is_active = models.BooleanField(default=True)
     created_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, related_name='created_lots')

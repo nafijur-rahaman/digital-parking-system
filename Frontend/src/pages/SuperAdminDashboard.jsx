@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Plus, Users, UserPlus, Server, Activity, ArrowRight,
-  LayoutDashboard, KeyRound, Trash2, Loader2, AlertCircle, CheckCircle, LogOut,
+  LayoutDashboard, KeyRound, Trash2, Loader2, AlertCircle, CheckCircle, LogOut, ParkingSquare,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
@@ -142,10 +142,11 @@ const SuperAdminDashboard = () => {
       setStaffFeedback({ type: 'success', message: msg });
       toast.success(msg);
       fetchStaff();
-    } catch {
-      const msg = 'Failed to delete staff.';
+    } catch (err) {
+      const msg = err?.data ? Object.values(err.data).flat().join(' ') : (err?.status ? `HTTP ${err.status}` : 'Failed to delete staff.');
       setStaffFeedback({ type: 'error', message: msg });
       toast.error(msg);
+      console.error("Delete Error:", err);
     }
   };
 

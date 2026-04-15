@@ -48,6 +48,7 @@ export default function AnalyticsPage() {
             { icon: BarChart3, label: 'Occupancy Charts',    desc: 'Daily & weekly trends',  color: 'var(--teal)' },
             { icon: TrendingUp, label: 'Peak Hour Analysis', desc: 'Busiest time slots',      color: 'var(--purple)' },
             { icon: AlertCircle, label: 'Usage Reports',     desc: 'Member & lot breakdown',  color: 'var(--amber)' },
+          // eslint-disable-next-line no-unused-vars
           ].map(({ icon: Icon, label, desc, color }) => (
             <div key={label} className="rounded-[14px] p-4 border border-white/[0.06] text-center"
               style={{ background: 'rgba(255,255,255,0.02)' }}>

@@ -145,10 +145,6 @@ class BookingListCreateView(APIView):
 
         try:
             booking.save()  
-            
-      
-            parking_lot.current_occupied += 1
-            parking_lot.save(update_fields=['current_occupied'])
 
             # Send Email
             email_sent = False
@@ -225,11 +221,6 @@ class BookingDetailView(APIView):
                 return Response({"error": "Invalid status code."}, status=status.HTTP_400_BAD_REQUEST)
             booking.status = new_status
             booking.save()
-            
-            # If changed from active to something else, clear the space
-            if was_active and new_status in ['completed', 'cancelled']:
-                booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
-                booking.parking_lot.save(update_fields=['current_occupied'])
 
         # Update other fields like vehicle number if provided
         serializer = BookingSerializer(booking, data=request.data, partial=True)
@@ -256,10 +247,6 @@ class BookingDetailView(APIView):
         was_active = booking.status == 'active'
         booking.status = 'cancelled'
         booking.save()
-        
-        if was_active:
-            booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
-            booking.parking_lot.save(update_fields=['current_occupied'])
             
         return Response({
             "message": "Booking cancelled successfully",
@@ -287,9 +274,6 @@ class VehicleExitView(APIView):
             booking.status = 'completed'
             booking.end_time = timezone.now()
             booking.save(update_fields=['status', 'end_time', 'updated_at'])
-            
-            booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
-            booking.parking_lot.save(update_fields=['current_occupied'])
             
             return Response({
                 "message": "Vehicle exited successfully. Space freed.",

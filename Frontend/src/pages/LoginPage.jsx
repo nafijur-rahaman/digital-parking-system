@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, User, Navigation, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, User, Navigation2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/auth';
 
 export default function LoginPage() {

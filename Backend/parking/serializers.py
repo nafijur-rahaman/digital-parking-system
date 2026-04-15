@@ -3,6 +3,7 @@ from .models import ParkingLot, Booking
 
 class ParkingLotSerializer(serializers.ModelSerializer):
     available_spots = serializers.ReadOnlyField()
+    current_occupied = serializers.ReadOnlyField()
     created_by = serializers.ReadOnlyField(source='created_by.username')
 
     class Meta:
