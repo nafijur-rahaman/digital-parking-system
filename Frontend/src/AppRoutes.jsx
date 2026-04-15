@@ -6,14 +6,17 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { RoleContext } from './context/RoleContext';
+import { ToastProvider } from './context/ToastContext';
+import ToastContainer from './components/ui/ToastContainer';
 
 const ProtectedRoutes = () => {
   const { user, loading } = useAuth();
 
   // Prevent flash of login page while rehydrating from localStorage
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="w-8 h-8 border-2 border-teal-500/30 border-t-teal-400 rounded-full animate-spin" />
+    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'var(--bg-app)' }}>
+      <span className="loader-ring" style={{ width: 40, height: 40 }} />
+      <p style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-sans)' }}>Loading…</p>
     </div>
   );
 
@@ -45,9 +48,13 @@ const ProtectedRoutes = () => {
 
 const AppRoutes = () => {
   return (
-    <AuthProvider>
-      <ProtectedRoutes />
-    </AuthProvider>
+    <ToastProvider>
+      {/* ToastContainer renders toasts over everything at z-[99999] */}
+      <ToastContainer />
+      <AuthProvider>
+        <ProtectedRoutes />
+      </AuthProvider>
+    </ToastProvider>
   );
 };
 

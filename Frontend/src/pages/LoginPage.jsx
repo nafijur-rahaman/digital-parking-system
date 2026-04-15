@@ -1,167 +1,161 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Lock, User, Navigation, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Navigation2, AlertCircle, ArrowRight, Lock, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const LoginPage = () => {
+export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    setIsLoading(true);
-
+    if (!username.trim() || !password.trim()) return;
+    setError(''); setLoading(true);
     const result = await login(username.trim(), password.trim());
     if (result.success) {
       navigate(result.role === 'superadmin' ? '/admin' : '/');
     } else {
       setError(result.error || 'Invalid credentials. Please try again.');
+      setLoading(false);
     }
-    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      {/* Animated background orbs */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute w-[500px] h-[500px] bg-teal-600/10 rounded-full blur-[120px] -top-40 -left-40 animate-pulse" />
-        <div className="absolute w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] -bottom-40 -right-40 animate-pulse" style={{ animationDelay: '1s' }} />
-        <div className="absolute w-[300px] h-[300px] bg-purple-600/8 rounded-full blur-[80px] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+    <div className="min-h-dvh flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div style={{ position:'absolute', top:'-10%', left:'20%', width:560, height:560, background:'rgba(45,212,191,0.055)', borderRadius:'50%', filter:'blur(120px)' }} />
+        <div style={{ position:'absolute', bottom:'-10%', right:'15%', width:480, height:480, background:'rgba(96,130,246,0.045)', borderRadius:'50%', filter:'blur(100px)' }} />
+        {/* Subtle grid */}
+        <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)', backgroundSize:'60px 60px' }} />
       </div>
 
-      {/* Grid pattern overlay */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: 'linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)',
-        backgroundSize: '50px 50px',
-      }} />
-
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="w-full max-w-md mx-4 relative z-10"
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="w-full relative z-10"
+        style={{ maxWidth: 400 }}
       >
-        <div className="glass-panel rounded-3xl p-8 shadow-2xl border border-white/10">
+        <div className="glass-panel rounded-[24px] p-8"
+          style={{ boxShadow: '0 24px 80px rgba(0,0,0,0.65), 0 4px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)' }}>
 
           {/* Logo */}
           <div className="flex flex-col items-center mb-8">
             <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.2 }}
-              className="bg-teal-500/20 text-teal-400 p-4 rounded-2xl border border-teal-500/30 shadow-[0_0_30px_rgba(20,184,166,0.3)] mb-5"
+              initial={{ scale: 0.5, opacity: 0, rotate: -15 }}
+              animate={{ scale: 1, opacity: 1, rotate: 0 }}
+              transition={{ delay: 0.1, type: 'spring', stiffness: 240, damping: 18 }}
+              className="mb-5 relative"
             >
-              <Navigation className="h-8 w-8" />
+              <div style={{ position:'absolute', inset:0, background:'rgba(45,212,191,0.18)', borderRadius:18, filter:'blur(18px)', transform:'scale(1.4)' }} />
+              <div className="relative flex items-center justify-center"
+                style={{ width:56, height:56, background:'linear-gradient(145deg, rgba(45,212,191,0.2), rgba(45,212,191,0.06))', borderRadius:18, border:'1px solid rgba(45,212,191,0.28)', boxShadow:'0 0 32px rgba(45,212,191,0.18)' }}>
+                <Navigation2 className="h-7 w-7" style={{ color:'#2DD4BF' }} />
+              </div>
             </motion.div>
-            <motion.h1
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-2xl font-bold text-white tracking-wide"
-            >
-              UniPark Access
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-              className="text-sm text-gray-500 mt-1"
-            >
-              BUBT Digital Parking Management System
-            </motion.p>
+            <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} className="text-center">
+              <h1 style={{ fontSize:22, fontWeight:800, color:'white', letterSpacing:'-0.03em', marginBottom:4 }}>UniPark</h1>
+              <p style={{ fontSize:13, color:'var(--text-secondary)' }}>BUBT Digital Parking Management</p>
+            </motion.div>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit}>
             {/* Username */}
-            <div>
-              <label className="text-xs font-bold text-gray-400 tracking-widest block mb-2">USERNAME</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.25 }}
+              className="field" style={{ marginBottom:16 }}>
+              <label className="label" htmlFor="login-username">Username</label>
+              <div className="input-wrap">
+                <User className="input-icon" />
                 <input
-                  type="text"
                   id="login-username"
+                  type="text"
                   value={username}
-                  onChange={(e) => { setUsername(e.target.value); setError(''); }}
-                  placeholder="Enter your username"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-11 pr-4 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all placeholder:text-gray-600"
+                  onChange={e => { setUsername(e.target.value); setError(''); }}
+                  placeholder="Your username"
+                  autoComplete="username"
+                  required
+                  className="input with-icon-l"
                 />
               </div>
-            </div>
+            </motion.div>
 
             {/* Password */}
-            <div>
-              <label className="text-xs font-bold text-gray-400 tracking-widest block mb-2">PASSWORD</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+            <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.3 }}
+              className="field" style={{ marginBottom:16 }}>
+              <label className="label" htmlFor="login-password">Password</label>
+              <div className="input-wrap">
+                <Lock className="input-icon" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
                   id="login-password"
+                  type={showPass ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                  placeholder="Enter your password"
-                  className="w-full bg-black/50 border border-white/10 rounded-xl pl-11 pr-12 py-3.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-teal-500/50 focus:border-teal-500/50 transition-all placeholder:text-gray-600"
+                  onChange={e => { setPassword(e.target.value); setError(''); }}
+                  placeholder="Your password"
+                  autoComplete="current-password"
+                  required
+                  className="input with-icon-l with-icon-r"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <button type="button" onClick={() => setShowPass(v => !v)}
+                  className="input-icon-r btn-ghost"
+                  style={{ position:'absolute', right:10, background:'none', border:'none', cursor:'pointer', padding:'6px', borderRadius:6, color:'var(--text-muted)', display:'flex', alignItems:'center' }}>
+                  {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Error */}
             <AnimatePresence>
               {error && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm"
+                  initial={{ opacity:0, height:0, marginBottom:0 }}
+                  animate={{ opacity:1, height:'auto', marginBottom:16 }}
+                  exit={{ opacity:0, height:0, marginBottom:0 }}
+                  style={{ overflow:'hidden' }}
                 >
-                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                  {error}
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:10, background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.22)', borderRadius:12, padding:'12px 14px' }}>
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color:'#F87171' }} />
+                    <p style={{ fontSize:13, color:'#fca5a5', lineHeight:1.45 }}>{error}</p>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
 
             {/* Submit */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-500 hover:to-teal-400 text-white font-bold py-3.5 rounded-xl transition-all shadow-[0_0_20px_rgba(20,184,166,0.4)] border border-teal-400/30 text-sm tracking-widest uppercase disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-                    className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                  />
-                  Authenticating...
-                </span>
-              ) : 'Sign In'}
-            </motion.button>
+            <motion.div initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.35 }}>
+              <button type="submit" disabled={loading || !username || !password}
+                className="btn btn-primary btn-wide btn-lg">
+                {loading ? (
+                  <>
+                    <span className="loader-ring" style={{ width:18, height:18 }} />
+                    Authenticating…
+                  </>
+                ) : (
+                  <>
+                    Sign In
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </motion.div>
           </form>
 
-          <p className="text-center text-xs text-gray-600 mt-6">
-            Authorized personnel only. All activity is monitored.
+          <p style={{ textAlign:'center', fontSize:11, color:'var(--text-dim)', marginTop:24, letterSpacing:'0.03em' }}>
+            Authorized personnel only · All sessions are monitored
           </p>
         </div>
+
+        <p style={{ textAlign:'center', fontSize:10, color:'var(--text-dim)', marginTop:16, letterSpacing:'0.1em', textTransform:'uppercase' }}>
+          UniPark v2.0 · 2026
+        </p>
       </motion.div>
     </div>
   );
-};
-
-export default LoginPage;
+}

@@ -1,87 +1,77 @@
-import { useState, useEffect, useCallback } from 'react';
-import StatsGrid from '../components/stats/StatsGrid';
+import { useState, useCallback, useEffect } from 'react';
+import { Car, ParkingSquare, Activity, CalendarCheck } from 'lucide-react';
+import StatCard from '../components/stats/StatCard';
 import ParkingMapPanel from '../components/map/ParkingMapPanel';
 import EntryLogPanel from '../components/logs/EntryLogPanel';
 import { getAllParkingLots, getAllBookings } from '../services/api';
 
-const LiveMapPage = () => {
+const Spinner = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="loader-ring" />
+  </div>
+);
+
+export default function LiveMapPage() {
   const [lots, setLots] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sensorEvent, setSensorEvent] = useState({
-    text: 'Monitoring entrance and exit scanners',
+    text: 'Monitoring entrance and exit sensors…',
     time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
   });
 
   const fetchData = useCallback(async () => {
     try {
-      const [lotsData, bookingsData] = await Promise.all([
-        getAllParkingLots(),
-        getAllBookings(),
-      ]);
-      setLots(lotsData);
-      setBookings(bookingsData);
+      const [l, b] = await Promise.all([getAllParkingLots(), getAllBookings()]);
+      setLots(l); setBookings(b);
     } catch (err) {
-      console.error('Failed to fetch parking data:', err);
+      console.error('Fetch error:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Computed stats from real data
-  const totalCapacity = lots.reduce((sum, l) => sum + l.total_capacity, 0);
-  const totalOccupied = lots.reduce((sum, l) => sum + l.current_occupied, 0);
-  const occupancyPct = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
-  const activeBookings = bookings.filter((b) => b.status === 'active');
+  // Computed stats
+  const totalCapacity = lots.reduce((s, l) => s + l.total_capacity, 0);
+  const totalOccupied = lots.reduce((s, l) => s + l.current_occupied, 0);
+  const occupancyPct  = totalCapacity > 0 ? Math.round((totalOccupied / totalCapacity) * 100) : 0;
+  const activeBookings = bookings.filter(b => b.status === 'active').length;
+  const totalFree = totalCapacity - totalOccupied;
 
   const stats = [
-    {
-      title: 'TOTAL OCCUPANCY',
-      value: String(totalOccupied),
-      total: `/${totalCapacity}`,
-      progress: occupancyPct,
-      color: occupancyPct >= 90 ? 'red' : 'blue',
-    },
-    {
-      title: 'ACTIVE BOOKINGS',
-      value: String(activeBookings.length),
-      total: 'Active',
-      color: 'purple',
-    },
+    { title: 'Total Occupied',   value: String(totalOccupied),   total: `/ ${totalCapacity}`,  color: 'blue',   icon: Car,           progress: occupancyPct, subtitle: `${totalFree} spaces available` },
+    { title: 'Active Bookings',  value: String(activeBookings),  total: 'active',              color: 'teal',   icon: CalendarCheck, subtitle: 'Vehicles currently parked'   },
+    { title: 'Parking Lots',     value: String(lots.length),     total: 'lots',                color: 'purple', icon: ParkingSquare, subtitle: `${lots.filter(l => l.is_active).length} active lots` },
+    { title: 'Occupancy Rate',   value: `${occupancyPct}%`,      color: occupancyPct >= 90 ? 'red' : 'amber', icon: Activity, subtitle: occupancyPct >= 90 ? 'Critical — nearly full' : 'Within normal range' },
   ];
 
   const handleBookingCreated = (booking, memberName) => {
-    setSensorEvent({
-      text: `Entry: ${memberName} assigned to ${booking.parking_lot_name}. Exit token emailed.`,
-      time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-    });
+    setSensorEvent({ text: `Entry: ${memberName} → ${booking.parking_lot_name}`, time: new Date().toLocaleTimeString('en-GB', { hour12: false }) });
     fetchData();
   };
 
   const handleVehicleExited = (booking) => {
-    setSensorEvent({
-      text: `Exit: Booking #${booking.id} in ${booking.parking_lot_name} marked complete. Space freed.`,
-      time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-    });
+    setSensorEvent({ text: `Exit: ${booking.university_member_name} left ${booking.parking_lot_name} — space freed`, time: new Date().toLocaleTimeString('en-GB', { hour12: false }) });
     fetchData();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-teal-500/30 border-t-teal-400 rounded-full animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return <Spinner />;
 
   return (
-    <>
-      <StatsGrid stats={stats} />
-      <div className="grid grid-cols-3 gap-6">
+    <div className="space-y-5">
+      {/* Stats row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((s, i) => (
+          <div key={s.title} style={{ animationDelay: `${i * 60}ms` }}>
+            <StatCard {...s} />
+          </div>
+        ))}
+      </div>
+
+      {/* Map + Terminal */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <ParkingMapPanel lots={lots} bookings={bookings} sensorEvent={sensorEvent} />
         <EntryLogPanel
           bookings={bookings}
@@ -90,8 +80,6 @@ const LiveMapPage = () => {
           onVehicleExited={handleVehicleExited}
         />
       </div>
-    </>
+    </div>
   );
-};
-
-export default LiveMapPage;
+}
