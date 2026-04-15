@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Plus, Users, UserPlus, Server, Activity, ArrowRight,
-  LayoutDashboard, KeyRound, Trash2, Loader2, AlertCircle, CheckCircle,
+  LayoutDashboard, KeyRound, Trash2, Loader2, AlertCircle, CheckCircle, LogOut,
 } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/auth';
 import {
   getAllStaff, createStaff, deleteStaff,
   getAllParkingLots, createParkingLot, deleteParkingLot,
@@ -28,6 +29,8 @@ const FeedbackBanner = ({ type, message }) => {
 
 const SuperAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('staff');
+  const { logout } = useAuth();
+  const navigate = useNavigate();
 
   // Staff state
   const [staffList, setStaffList] = useState([]);
@@ -130,6 +133,11 @@ const SuperAdminDashboard = () => {
     { key: 'slots', icon: <Server className="w-4 h-4" />, label: 'Parking Grid' },
   ];
 
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       {/* Sidebar */}
@@ -153,6 +161,14 @@ const SuperAdminDashboard = () => {
             <span className="flex items-center gap-2"><Activity className="w-4 h-4" /> Live Terminal</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </NavLink>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-between p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-300 hover:bg-rose-500/15 hover:border-rose-500/35 transition-all font-semibold text-sm"
+          >
+            <span className="flex items-center gap-2"><LogOut className="w-4 h-4" /> Sign Out</span>
+            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
         </div>
       </div>
 
