@@ -16,6 +16,8 @@ class ParkingLotSerializer(serializers.ModelSerializer):
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     university_id = serializers.CharField(write_only=True, required=True, help_text="University ID of the parker")
+    start_time = serializers.DateTimeField(write_only=True, required=False)
+    end_time = serializers.DateTimeField(write_only=True, required=False)
 
     class Meta:
         model = Booking
@@ -33,4 +35,4 @@ class BookingSerializer(serializers.ModelSerializer):
             'id', 'created_by_username', 'university_member_name', 'parking_lot', 'parking_lot_name',
             'start_time', 'end_time', 'status', 'vehicle_number', 'exit_token', 'created_at'
         ]
-        read_only_fields = ['status', 'exit_token']
+        read_only_fields = ['status', 'exit_token']

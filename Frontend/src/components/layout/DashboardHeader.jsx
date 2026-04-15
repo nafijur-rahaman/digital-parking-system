@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { Navigation2, Shield, User, ChevronDown, UserCircle, LogOut, Settings } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { RoleContext } from '../../context/RoleContext';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/auth';
 
 const NavItem = ({ to, label }) => (
   <NavLink to={to} className={({ isActive }) =>

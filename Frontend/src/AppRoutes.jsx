@@ -4,21 +4,14 @@ import LoginPage from './pages/LoginPage';
 import LiveMapPage from './pages/LiveMapPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider } from './context/AuthProvider';
+import { useAuth } from './context/auth';
 import { RoleContext } from './context/RoleContext';
 import { ToastProvider } from './context/ToastContext';
 import ToastContainer from './components/ui/ToastContainer';
 
 const ProtectedRoutes = () => {
-  const { user, loading } = useAuth();
-
-  // Prevent flash of login page while rehydrating from localStorage
-  if (loading) return (
-    <div style={{ minHeight: '100dvh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, background: 'var(--bg-app)' }}>
-      <span className="loader-ring" style={{ width: 40, height: 40 }} />
-      <p style={{ fontSize: 12, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-sans)' }}>Loading…</p>
-    </div>
-  );
+  const { user } = useAuth();
 
   if (!user) return <LoginPage />;
 

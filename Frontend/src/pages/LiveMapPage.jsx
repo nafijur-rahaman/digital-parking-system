@@ -4,6 +4,7 @@ import StatCard from '../components/stats/StatCard';
 import ParkingMapPanel from '../components/map/ParkingMapPanel';
 import EntryLogPanel from '../components/logs/EntryLogPanel';
 import { getAllParkingLots, getAllBookings } from '../services/api';
+import { formatTimeDhaka } from '../utils/datetime';
 
 const Spinner = () => (
   <div className="flex items-center justify-center h-64">
@@ -16,8 +17,8 @@ export default function LiveMapPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sensorEvent, setSensorEvent] = useState({
-    text: 'Monitoring entrance and exit sensors…',
-    time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+    text: 'Monitoring entrance and exit scanners',
+    time: formatTimeDhaka(new Date()),
   });
 
   const fetchData = useCallback(async () => {
@@ -48,12 +49,18 @@ export default function LiveMapPage() {
   ];
 
   const handleBookingCreated = (booking, memberName) => {
-    setSensorEvent({ text: `Entry: ${memberName} → ${booking.parking_lot_name}`, time: new Date().toLocaleTimeString('en-GB', { hour12: false }) });
+    setSensorEvent({
+      text: `Entry: ${memberName} assigned to ${booking.parking_lot_name}. Exit token emailed.`,
+      time: formatTimeDhaka(new Date()),
+    });
     fetchData();
   };
 
   const handleVehicleExited = (booking) => {
-    setSensorEvent({ text: `Exit: ${booking.university_member_name} left ${booking.parking_lot_name} — space freed`, time: new Date().toLocaleTimeString('en-GB', { hour12: false }) });
+    setSensorEvent({
+      text: `Exit: Booking #${booking.id} in ${booking.parking_lot_name} marked complete. Space freed.`,
+      time: formatTimeDhaka(new Date()),
+    });
     fetchData();
   };
 

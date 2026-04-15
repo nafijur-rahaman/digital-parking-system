@@ -7,7 +7,7 @@ const statusStyles = {
   violation: 'bg-red-500/20 border-red-500/70 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.4)]',
 };
 
-const ParkingSlot = ({ id, type, status, memberId }) => {
+const ParkingSlot = ({ id, status, memberId }) => {
   return (
     <motion.div 
       whileHover={{ scale: 1.05, y: -2 }}

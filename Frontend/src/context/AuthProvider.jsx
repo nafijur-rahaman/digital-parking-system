@@ -1,21 +1,20 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { loginUser } from '../services/api';
+import { AuthContext } from './auth';
 
-export const AuthContext = createContext(null);
-
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // prevents flash of login on refresh
-
-  // Rehydrate from localStorage on first load
-  useEffect(() => {
+const readStoredUser = () => {
+  try {
     const storedUser = localStorage.getItem('parkingUser');
     const storedToken = localStorage.getItem('parkingToken');
-    if (storedUser && storedToken) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
-  }, []);
+    if (!storedUser || !storedToken) return null;
+    return JSON.parse(storedUser);
+  } catch {
+    return null;
+  }
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(readStoredUser);
 
   const login = async (username, password) => {
     try {
@@ -41,11 +40,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = useMemo(() => ({ user, login, logout }), [user]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => useContext(AuthContext);

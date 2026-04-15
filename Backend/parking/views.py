@@ -109,8 +109,6 @@ class BookingListCreateView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
         parking_lot = serializer.validated_data['parking_lot']
-        start_time = serializer.validated_data['start_time']
-        end_time = serializer.validated_data['end_time']
         vehicle_number = serializer.validated_data.get('vehicle_number', '')
         university_id = serializer.validated_data.get('university_id')
 
@@ -120,11 +118,19 @@ class BookingListCreateView(APIView):
             return Response({"error": "University ID not found. User is not registered in the university."}, 
                             status=status.HTTP_404_NOT_FOUND)
 
+        parking_lot = ParkingLot.objects.select_for_update().get(pk=parking_lot.pk)
+
         if not parking_lot.is_active:
-            return Response({"error": "This parking lot is currently inactive"}, 
-                          status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "This parking lot is currently inactive"},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if parking_lot.current_occupied >= parking_lot.total_capacity:
+            return Response({"error": f"No space available in {parking_lot.name}."},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         exit_token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        start_time = timezone.now()
+        end_time = None
 
         booking = Booking(
             created_by=request.user,
@@ -279,7 +285,8 @@ class VehicleExitView(APIView):
                 return Response({"error": f"Cannot exit. Booking is currently {booking.status}"}, status=status.HTTP_400_BAD_REQUEST)
                 
             booking.status = 'completed'
-            booking.save()
+            booking.end_time = timezone.now()
+            booking.save(update_fields=['status', 'end_time', 'updated_at'])
             
             booking.parking_lot.current_occupied = max(0, booking.parking_lot.current_occupied - 1)
             booking.parking_lot.save(update_fields=['current_occupied'])
