@@ -1,11 +1,5 @@
-// ============================================================
-// src/services/api.js
-// Centralized API service — all calls to the Django backend
-// Base URL: http://127.0.0.1:8000
-// Auth: DRF Token stored in localStorage as "parkingToken"
-// ============================================================
 
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = 'https://smart-parking.mrshakil.site';
 
 function getToken() {
   return localStorage.getItem('parkingToken');
