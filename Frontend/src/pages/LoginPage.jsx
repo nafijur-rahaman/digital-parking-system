@@ -30,7 +30,7 @@ export default function LoginPage() {
     <div className="min-h-dvh flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background */}
       <div className="fixed inset-0 pointer-events-none">
-        <div style={{ position:'absolute', top:'-10%', left:'20%', width:560, height:560, background:'rgba(45,212,191,0.055)', borderRadius:'50%', filter:'blur(120px)' }} />
+        <div style={{ position:'absolute', top:'-10%', left:'20%', width:560, height:560, background:'rgba(99, 202, 188, 0.2)', borderRadius:'50%', filter:'blur(120px)' }} />
         <div style={{ position:'absolute', bottom:'-10%', right:'15%', width:480, height:480, background:'rgba(96,130,246,0.045)', borderRadius:'50%', filter:'blur(100px)' }} />
         {/* Subtle grid */}
         <div style={{ position:'absolute', inset:0, backgroundImage:'linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)', backgroundSize:'60px 60px' }} />
