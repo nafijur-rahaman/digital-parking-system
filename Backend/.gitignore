@@ -34,3 +34,6 @@ env/
 
 profile_pics
 ticket_messages
+seed_university_data.py
+university_members_export.xlsx
+university_members_report.pdf
