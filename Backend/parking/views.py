@@ -103,7 +103,10 @@ class BookingListCreateView(APIView):
 
     @transaction.atomic
     def post(self, request):
-        """Create a new booking with capacity & overlap check"""
+        """Create a new booking with capacity checks.
+
+        Prevents duplicate active bookings for the same university member.
+        """
         serializer = BookingCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -113,10 +116,24 @@ class BookingListCreateView(APIView):
         university_id = serializer.validated_data.get('university_id')
 
         try:
-            member = UniversityMember.objects.get(university_id=university_id)
+            # Lock the member row so concurrent requests can't create multiple active bookings.
+            member = UniversityMember.objects.select_for_update().get(university_id=university_id)
         except UniversityMember.DoesNotExist:
             return Response({"error": "University ID not found. User is not registered in the university."}, 
                             status=status.HTTP_404_NOT_FOUND)
+
+        existing_active = (
+            Booking.objects
+            .select_related('parking_lot')
+            .filter(university_member=member, status='active')
+            .order_by('-created_at')
+            .first()
+        )
+        if existing_active:
+            return Response({
+                "error": "This university member already has an active booking.",
+                "active_booking": BookingSerializer(existing_active).data,
+            }, status=status.HTTP_409_CONFLICT)
 
         parking_lot = ParkingLot.objects.select_for_update().get(pk=parking_lot.pk)
 
