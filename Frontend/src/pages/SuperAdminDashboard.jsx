@@ -12,6 +12,8 @@ import {
   getAllBookings,
 } from '../services/api';
 import { useToast } from '../context/ToastContext';
+import Modal from '../components/ui/Modal';
+import RolePicker from '../components/ui/RolePicker';
 
 /* ── Feedback banner ───────────────────────────────────────── */
 const FeedbackBanner = ({ type, message }) => {
@@ -74,8 +76,8 @@ const SuperAdminDashboard = () => {
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffForm, setStaffForm] = useState({ username: '', password: '', full_name: '', email: '', phone: '', role: 'staff' });
   const [editingStaffId, setEditingStaffId] = useState(null);
-  const [editStaffName, setEditStaffName] = useState('');
-  const [editStaffPassword, setEditStaffPassword] = useState('');
+  const [editStaffModalOpen, setEditStaffModalOpen] = useState(false);
+  const [editStaffForm, setEditStaffForm] = useState({ username: '', password: '', full_name: '', email: '', phone: '', role: 'staff' });
 
   const [lots, setLots] = useState([]);
   const [lotsLoading, setLotsLoading] = useState(true);
@@ -153,26 +155,44 @@ const SuperAdminDashboard = () => {
     }
   };
 
-  const handleUpdateStaff = async (id) => {
-    if (!editStaffName.trim() && !editStaffPassword.trim()) {
-      setEditingStaffId(null);
-      return;
-    }
+  const handleOpenEditStaff = (s) => {
+    setEditingStaffId(s.id);
+    setEditStaffForm({
+      username: s.username || '',
+      password: '',
+      full_name: s.full_name || '',
+      email: s.email || '',
+      phone: s.phone || '',
+      role: s.role || 'staff'
+    });
+    setEditStaffModalOpen(true);
+  };
+
+  const handleUpdateStaff = async (e) => {
+    e.preventDefault();
+    setStaffSubmitting(true);
     setStaffFeedback({ type: '', message: '' });
     try {
-      const payload = { full_name: editStaffName };
-      if (editStaffPassword.trim()) payload.password = editStaffPassword;
-      await updateStaff(id, payload);
+      const payload = {
+        username: editStaffForm.username,
+        full_name: editStaffForm.full_name,
+        email: editStaffForm.email,
+        phone: editStaffForm.phone,
+        role: editStaffForm.role,
+      };
+      if (editStaffForm.password) payload.password = editStaffForm.password;
+
+      await updateStaff(editingStaffId, payload);
       const msg = `Staff details updated successfully.`;
       setStaffFeedback({ type: 'success', message: msg });
       toast.success(msg);
-      setEditingStaffId(null);
+      setEditStaffModalOpen(false);
       fetchStaff();
     } catch (err) {
       const errMsg = err?.data ? Object.values(err.data).flat().join(' ') : 'Failed to update staff.';
       setStaffFeedback({ type: 'error', message: errMsg });
       toast.error(errMsg);
-    }
+    } finally { setStaffSubmitting(false); }
   };
 
   const handleCreateLot = async (e) => {
@@ -330,10 +350,7 @@ const SuperAdminDashboard = () => {
                         placeholder="+8801700000000" className="input" />
                     </Field>
                     <Field label="Role">
-                      <select value={staffForm.role} onChange={e => setStaffForm({ ...staffForm, role: e.target.value })} className="input">
-                        <option value="staff">Staff — Gate Guard</option>
-                        <option value="superadmin">Super Admin</option>
-                      </select>
+                      <RolePicker value={staffForm.role} onChange={val => setStaffForm({ ...staffForm, role: val })} />
                     </Field>
                     <button type="submit" disabled={staffSubmitting} className="btn btn-wide"
                       style={{ background: 'linear-gradient(135deg, #5B21B6, #7C3AED)', color: 'white', border: '1px solid rgba(167,139,250,0.3)', fontWeight: 700, marginTop: 4, boxShadow: '0 0 20px rgba(124,58,237,0.2)' }}>
@@ -364,35 +381,7 @@ const SuperAdminDashboard = () => {
                               {(s.full_name || s.username).substring(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              {editingStaffId === s.id ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
-                                  <input
-                                    type="text"
-                                    value={editStaffName}
-                                    placeholder="Name"
-                                    onChange={e => setEditStaffName(e.target.value)}
-                                    style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(167,139,250,0.3)', color: 'white', borderRadius: 6, padding: '4px 8px', fontSize: 13, outline: 'none', width: '160px' }}
-                                    autoFocus
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleUpdateStaff(s.id);
-                                      if (e.key === 'Escape') setEditingStaffId(null);
-                                    }}
-                                  />
-                                  <input
-                                    type="password"
-                                    value={editStaffPassword}
-                                    onChange={e => setEditStaffPassword(e.target.value)}
-                                    placeholder="New Password (optional)"
-                                    style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(167,139,250,0.3)', color: 'white', borderRadius: 6, padding: '4px 8px', fontSize: 13, outline: 'none', width: '160px' }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleUpdateStaff(s.id);
-                                      if (e.key === 'Escape') setEditingStaffId(null);
-                                    }}
-                                  />
-                                </div>
-                              ) : (
-                                <p style={{ fontSize: 13, fontWeight: 600, color: 'white', lineHeight: 1.2 }}>{s.full_name || s.username}</p>
-                              )}
+                              <p style={{ fontSize: 13, fontWeight: 600, color: 'white', lineHeight: 1.2 }}>{s.full_name || s.username}</p>
                               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.3 }}>{s.email}</p>
                             </div>
                           </div>
@@ -400,37 +389,18 @@ const SuperAdminDashboard = () => {
                             <span className={s.is_active ? 'badge badge-active' : 'badge badge-inactive'}>
                               {s.is_active ? 'Active' : 'Inactive'}
                             </span>
-                            {editingStaffId === s.id ? (
-                              <>
-                                <button onClick={() => handleUpdateStaff(s.id)}
-                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#10B981', transition: 'all 0.15s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.1)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                                  <Check style={{ width: 14, height: 14 }} />
-                                </button>
-                                <button onClick={() => setEditingStaffId(null)}
-                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
-                                  <X style={{ width: 14, height: 14 }} />
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button onClick={() => { setEditingStaffId(s.id); setEditStaffName(s.full_name || s.username); setEditStaffPassword(''); }}
-                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.color = '#A78BFA'; e.currentTarget.style.background = 'rgba(167,139,250,0.08)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                                  <Edit2 style={{ width: 14, height: 14 }} />
-                                </button>
-                                <button onClick={() => handleDeleteStaff(s.id, s.username)}
-                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
-                                  onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
-                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                                  <Trash2 style={{ width: 14, height: 14 }} />
-                                </button>
-                              </>
-                            )}
+                            <button onClick={() => handleOpenEditStaff(s)}
+                              style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#A78BFA'; e.currentTarget.style.background = 'rgba(167,139,250,0.08)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                              <Edit2 style={{ width: 14, height: 14 }} />
+                            </button>
+                            <button onClick={() => handleDeleteStaff(s.id, s.username)}
+                              style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                              onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                              <Trash2 style={{ width: 14, height: 14 }} />
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -580,6 +550,44 @@ const SuperAdminDashboard = () => {
 
         </AnimatePresence>
       </div>
+
+      <Modal isOpen={editStaffModalOpen} onClose={() => setEditStaffModalOpen(false)} title="Update Staff Credentials">
+        <form onSubmit={handleUpdateStaff} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Field label="Username">
+            <input type="text" value={editStaffForm.username} required
+              onChange={e => setEditStaffForm({ ...editStaffForm, username: e.target.value })}
+              className="input" />
+          </Field>
+          <Field label="Password" optional>
+            <input type="password" value={editStaffForm.password}
+              onChange={e => setEditStaffForm({ ...editStaffForm, password: e.target.value })}
+              placeholder="Leave blank to keep current password" className="input" />
+          </Field>
+          <Field label="Full Name">
+            <input type="text" value={editStaffForm.full_name} required
+              onChange={e => setEditStaffForm({ ...editStaffForm, full_name: e.target.value })}
+              className="input" />
+          </Field>
+          <Field label="Email">
+            <input type="email" value={editStaffForm.email} required
+              onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
+              className="input" />
+          </Field>
+          <Field label="Phone" optional>
+            <input type="text" value={editStaffForm.phone}
+              onChange={e => setEditStaffForm({ ...editStaffForm, phone: e.target.value })}
+              className="input" />
+          </Field>
+          <Field label="Role">
+            <RolePicker value={editStaffForm.role} onChange={val => setEditStaffForm({ ...editStaffForm, role: val })} />
+          </Field>
+          <button type="submit" disabled={staffSubmitting} className="btn btn-wide"
+            style={{ background: 'linear-gradient(135deg, #5B21B6, #7C3AED)', color: 'white', border: '1px solid rgba(167,139,250,0.3)', fontWeight: 700, marginTop: 14, boxShadow: '0 0 20px rgba(124,58,237,0.2)' }}>
+            {staffSubmitting ? <><span className="loader-ring" style={{ width: 16, height: 16 }} />Updating…</> : 'Save Changes'}
+          </button>
+        </form>
+      </Modal>
+
     </motion.div>
   );
 };
