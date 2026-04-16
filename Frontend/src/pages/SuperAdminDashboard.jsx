@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Shield, Plus, Users, UserPlus, Server, Activity, ArrowRight,
-  LayoutDashboard, KeyRound, Trash2, Loader2, AlertCircle, CheckCircle, LogOut, ParkingSquare,
+  LayoutDashboard, KeyRound, Trash2, Edit2, Check, X, Loader2, AlertCircle, CheckCircle, LogOut, ParkingSquare,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/auth';
 import {
-  getAllStaff, createStaff, deleteStaff,
+  getAllStaff, createStaff, updateStaff, deleteStaff,
   getAllParkingLots, createParkingLot, deleteParkingLot,
   getAllBookings,
 } from '../services/api';
@@ -73,6 +73,9 @@ const SuperAdminDashboard = () => {
   const [staffFeedback, setStaffFeedback] = useState({ type: '', message: '' });
   const [staffSubmitting, setStaffSubmitting] = useState(false);
   const [staffForm, setStaffForm] = useState({ username: '', password: '', full_name: '', email: '', phone: '', role: 'staff' });
+  const [editingStaffId, setEditingStaffId] = useState(null);
+  const [editStaffName, setEditStaffName] = useState('');
+  const [editStaffPassword, setEditStaffPassword] = useState('');
 
   const [lots, setLots] = useState([]);
   const [lotsLoading, setLotsLoading] = useState(true);
@@ -147,6 +150,28 @@ const SuperAdminDashboard = () => {
       setStaffFeedback({ type: 'error', message: msg });
       toast.error(msg);
       console.error("Delete Error:", err);
+    }
+  };
+
+  const handleUpdateStaff = async (id) => {
+    if (!editStaffName.trim() && !editStaffPassword.trim()) {
+      setEditingStaffId(null);
+      return;
+    }
+    setStaffFeedback({ type: '', message: '' });
+    try {
+      const payload = { full_name: editStaffName };
+      if (editStaffPassword.trim()) payload.password = editStaffPassword;
+      await updateStaff(id, payload);
+      const msg = `Staff details updated successfully.`;
+      setStaffFeedback({ type: 'success', message: msg });
+      toast.success(msg);
+      setEditingStaffId(null);
+      fetchStaff();
+    } catch (err) {
+      const errMsg = err?.data ? Object.values(err.data).flat().join(' ') : 'Failed to update staff.';
+      setStaffFeedback({ type: 'error', message: errMsg });
+      toast.error(errMsg);
     }
   };
 
@@ -339,7 +364,35 @@ const SuperAdminDashboard = () => {
                               {(s.full_name || s.username).substring(0, 2).toUpperCase()}
                             </div>
                             <div>
-                              <p style={{ fontSize: 13, fontWeight: 600, color: 'white', lineHeight: 1.2 }}>{s.full_name || s.username}</p>
+                              {editingStaffId === s.id ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}>
+                                  <input
+                                    type="text"
+                                    value={editStaffName}
+                                    placeholder="Name"
+                                    onChange={e => setEditStaffName(e.target.value)}
+                                    style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(167,139,250,0.3)', color: 'white', borderRadius: 6, padding: '4px 8px', fontSize: 13, outline: 'none', width: '160px' }}
+                                    autoFocus
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleUpdateStaff(s.id);
+                                      if (e.key === 'Escape') setEditingStaffId(null);
+                                    }}
+                                  />
+                                  <input
+                                    type="password"
+                                    value={editStaffPassword}
+                                    onChange={e => setEditStaffPassword(e.target.value)}
+                                    placeholder="New Password (optional)"
+                                    style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(167,139,250,0.3)', color: 'white', borderRadius: 6, padding: '4px 8px', fontSize: 13, outline: 'none', width: '160px' }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') handleUpdateStaff(s.id);
+                                      if (e.key === 'Escape') setEditingStaffId(null);
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <p style={{ fontSize: 13, fontWeight: 600, color: 'white', lineHeight: 1.2 }}>{s.full_name || s.username}</p>
+                              )}
                               <p style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.3 }}>{s.email}</p>
                             </div>
                           </div>
@@ -347,12 +400,37 @@ const SuperAdminDashboard = () => {
                             <span className={s.is_active ? 'badge badge-active' : 'badge badge-inactive'}>
                               {s.is_active ? 'Active' : 'Inactive'}
                             </span>
-                            <button onClick={() => handleDeleteStaff(s.id, s.username)}
-                              style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
-                              onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
-                              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
-                              <Trash2 style={{ width: 14, height: 14 }} />
-                            </button>
+                            {editingStaffId === s.id ? (
+                              <>
+                                <button onClick={() => handleUpdateStaff(s.id)}
+                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: '#10B981', transition: 'all 0.15s' }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.1)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                                  <Check style={{ width: 14, height: 14 }} />
+                                </button>
+                                <button onClick={() => setEditingStaffId(null)}
+                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}>
+                                  <X style={{ width: 14, height: 14 }} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button onClick={() => { setEditingStaffId(s.id); setEditStaffName(s.full_name || s.username); setEditStaffPassword(''); }}
+                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = '#A78BFA'; e.currentTarget.style.background = 'rgba(167,139,250,0.08)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                                  <Edit2 style={{ width: 14, height: 14 }} />
+                                </button>
+                                <button onClick={() => handleDeleteStaff(s.id, s.username)}
+                                  style={{ padding: 6, borderRadius: 8, background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 0.15s' }}
+                                  onMouseEnter={e => { e.currentTarget.style.color = '#F87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}>
+                                  <Trash2 style={{ width: 14, height: 14 }} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       ))}
