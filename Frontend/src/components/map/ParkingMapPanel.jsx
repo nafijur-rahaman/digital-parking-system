@@ -132,8 +132,8 @@ export default function ParkingMapPanel({ lots, sensorEvent }) {
         </div>
 
         {/* Slot grid */}
-        <div className="rounded-[14px] p-4 border border-white/[0.05]" style={{ background: 'rgba(0,0,0,0.3)' }}>
-          <div className="flex items-center justify-between mb-3">
+        <div className="rounded-[14px] p-4 border border-white/[0.05] " style={{ background: 'rgba(0,0,0,0.3)' }}>
+          <div className="flex items-center justify-between mb-3 ">
             <p className="text-[11px] font-[600] text-[var(--text-muted)]">{lot.name} — Space Layout</p>
             <div className="flex items-center gap-4">
               <span className="flex items-center gap-1.5 text-[10px] font-[600] text-[var(--text-muted)]">
@@ -148,7 +148,7 @@ export default function ParkingMapPanel({ lots, sensorEvent }) {
           {slots.length === 0 ? (
             <p className="text-[12px] text-[var(--text-muted)] text-center py-6">Lot capacity is 0.</p>
           ) : (
-            <div className="grid grid-cols-8 gap-1.5 max-h-[160px] overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-8 gap-1.5 max-h-[600px] overflow-y-auto custom-scrollbar">
               {slots.map((slot) => (
                 <motion.div
                   key={slot.id}

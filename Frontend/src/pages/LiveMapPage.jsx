@@ -67,7 +67,7 @@ export default function LiveMapPage() {
   if (loading) return <Spinner />;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Stats row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((s, i) => (
@@ -78,7 +78,7 @@ export default function LiveMapPage() {
       </div>
 
       {/* Map + Terminal */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ParkingMapPanel lots={lots} bookings={bookings} sensorEvent={sensorEvent} />
         <EntryLogPanel
           bookings={bookings}
