@@ -23,3 +23,5 @@ dist-ssr
 
 .vercel
 .env*.local
+
+db.sqlite3
