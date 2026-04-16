@@ -12,7 +12,7 @@ from .permissions import IsSuperAdmin, IsStaffOrSuperAdmin
 
 # ====================== LOGIN ======================
 class LoginView(APIView):
-    permission_classes = []  # No auth needed for login
+    permission_classes = [] 
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)

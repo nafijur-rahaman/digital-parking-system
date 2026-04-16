@@ -27,13 +27,11 @@ class ParkingLotListCreateView(APIView):
     permission_classes = [IsAuthenticated, IsSuperAdminOrReadOnly]
 
     def get(self, request):
-        """List all parking lots with availability"""
         lots = ParkingLot.objects.all()
         serializer = ParkingLotSerializer(lots, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        """Create new parking lot"""
         serializer = ParkingLotSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(created_by=request.user)
@@ -92,7 +90,6 @@ class BookingListCreateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Staff sees their own bookings, Superadmin sees all"""
         if request.user.role == 'superadmin':
             bookings = Booking.objects.select_related('parking_lot', 'university_member').all()
         else:
@@ -103,10 +100,6 @@ class BookingListCreateView(APIView):
 
     @transaction.atomic
     def post(self, request):
-        """Create a new booking with capacity checks.
-
-        Prevents duplicate active bookings for the same university member.
-        """
         serializer = BookingCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -116,7 +109,6 @@ class BookingListCreateView(APIView):
         university_id = serializer.validated_data.get('university_id')
 
         try:
-            # Lock the member row so concurrent requests can't create multiple active bookings.
             member = UniversityMember.objects.select_for_update().get(university_id=university_id)
         except UniversityMember.DoesNotExist:
             return Response({"error": "University ID not found. User is not registered in the university."}, 
@@ -207,7 +199,6 @@ class BookingDetailView(APIView):
     def get_object(self, pk):
         try:
             booking = Booking.objects.select_related('parking_lot').get(pk=pk)
-            # Staff can only access their own booking
             if booking.created_by != self.request.user and self.request.user.role != 'superadmin':
                 return None
             return booking
@@ -224,7 +215,6 @@ class BookingDetailView(APIView):
 
     @transaction.atomic
     def put(self, request, pk):
-        """Update a booking (e.g. setting status to completed or cancelled)"""
         booking = self.get_object(pk)
         if not booking:
             return Response({"error": "Booking not found or access denied"}, 
@@ -239,7 +229,7 @@ class BookingDetailView(APIView):
             booking.status = new_status
             booking.save()
 
-        # Update other fields like vehicle number if provided
+   
         serializer = BookingSerializer(booking, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -251,7 +241,6 @@ class BookingDetailView(APIView):
 
     @transaction.atomic
     def delete(self, request, pk):
-        """Cancel a booking completely"""
         booking = self.get_object(pk)
         if not booking:
             return Response({"error": "Booking not found or access denied"}, 
@@ -283,7 +272,6 @@ class VehicleExitView(APIView):
 
         try:
             booking = Booking.objects.select_related('parking_lot').get(exit_token=exit_token)
-            # No user check needed locally because the token itself is the secure key
                 
             if booking.status != 'active':
                 return Response({"error": f"Cannot exit. Booking is currently {booking.status}"}, status=status.HTTP_400_BAD_REQUEST)
