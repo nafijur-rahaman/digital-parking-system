@@ -2,16 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ParkingSquare, CheckCircle2 } from 'lucide-react';
 
-/**
- * LotPicker — custom dropdown for parking lot selection.
- * Renders a styled trigger button and an animated list panel.
- *
- * Props:
- *   lots       – array of lot objects from the API
- *   value      – selected lot id (string) or ''
- *   onChange   – (lotId: string) => void
- *   required   – bool
- */
+
 export default function LotPicker({ lots = [], value, onChange, required }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);

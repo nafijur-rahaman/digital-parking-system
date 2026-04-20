@@ -8,8 +8,9 @@ export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = 'info', duration = 3000) => {
+    const safeDuration = Number.isFinite(Number(duration)) ? Number(duration) : 3000;
     const id = ++_id;
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
+    setToasts((prev) => [...prev, { id, message, type, duration: safeDuration }]);
     return id;
   }, []);
 
@@ -23,6 +24,8 @@ export const ToastProvider = ({ children }) => {
     error:   (msg, dur) => addToast(msg, 'error', dur),
     warning: (msg, dur) => addToast(msg, 'warning', dur),
     info:    (msg, dur) => addToast(msg, 'info', dur),
+    entry:   (msg, dur) => addToast(msg, 'entry', dur),
+    exit:    (msg, dur) => addToast(msg, 'exit', dur),
   };
 
   return (

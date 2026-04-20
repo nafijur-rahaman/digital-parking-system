@@ -67,7 +67,7 @@ export default function EntryLogPanel({ bookings, lots, onBookingCreated, onVehi
       const res = await createBooking({ parking_lot: parseInt(lotId), university_id: member.university_id, vehicle_number: plate.trim(), ...times });
       onBookingCreated(res.booking, member.full_name);
       const lotType = lot.lot_type ? ` (${lot.lot_type.charAt(0).toUpperCase() + lot.lot_type.slice(1)})` : '';
-      toast.success(`Space allocated in ${lot.name}${lotType} for ${member.full_name}.`, 'entry');
+      toast.entry(`Space allocated in ${lot.name}${lotType} for ${member.full_name}.`);
       resetEntry();
     } catch (err) {
       toast.error(err?.data?.error || 'Failed to create booking.');
@@ -81,7 +81,7 @@ export default function EntryLogPanel({ bookings, lots, onBookingCreated, onVehi
     try {
       const res = await exitVehicle(exitToken.trim());
       onVehicleExited(res.booking);
-      toast.success(`${res.booking.university_member_name} exited ${res.booking.parking_lot_name}. Space is now free.`, 'exit');
+      toast.exit(`${res.booking.university_member_name} exited ${res.booking.parking_lot_name}. Space is now free.`);
       resetExit();
     } catch (err) {
       toast.error(err?.data?.error || 'Invalid exit token or booking already closed.');
